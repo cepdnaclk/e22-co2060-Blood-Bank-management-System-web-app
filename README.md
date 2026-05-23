@@ -1,66 +1,34 @@
-# 🩸 DevDynamos Blood Bank Application
+📝 Project Overview
+The DevDynamos Blood Bank Application is a full-stack system designed to efficiently manage blood donations, inventory, and emergencies. It serves three main types of users: Donors, Medical Staff, and Administrators.
 
-## 🧩 Project Overview
-The Blood Bank Application helps **donors, medical staff, and administrators** efficiently manage blood donations and emergencies. Features include **donor eligibility checks, donation scheduling, inventory tracking, and location-based matching for emergencies**.
+Frontend: React (built with Vite), styled using Tailwind CSS.
+Backend: Python with Django, using SQLite3 as the database.
+🚀 Recently Completed Work (Admin Panel)
+Based on the implementation summaries, the most recent focus has been on completing the Doctor Management System within the Admin Dashboard. The following features were successfully implemented:
 
-## 🏗️ Feature in our system
+Add Doctor: Fully functional form with validation, error handling, and API integration.
+Edit Doctor: Pre-fills existing doctor data (disabling sensitive fields like email/username) and allows updating information (name, phone, specialization, hospital).
+Data Table Enhancements:
+Pagination: Added functionality to navigate through lists (e.g., 10 doctors per page).
+Sorting: Added abilities to sort by Name, Email, and Date Created (Ascending/Descending).
+Search/Filtering: Functional search bars to quickly lookup medical officers.
+🔑 Key Features of the System
+1. Donor Portal
 
-<details>
-<summary>Donor Portal</summary>
+Dashboard & Eligibility: Personalized dashboard showing donation statistics, history, status badges, and an interactive eligibility quiz.
+Appointments: Camp/Hospital locator with a map, scheduling donations, and generating QR code confirmations.
+Certificates: Printable digital certificates for completed donations.
+2. Medical Staff (Doctor) Portal
 
-- Personalized dashboard and donation stats  
-- Eligibility quiz with interactive logic  
-- Donation history with status badges  
-- Printable digital certificates  
-- Camp/Hospital locator (maps)  
-- Appointment booking with QR code confirmation  
-- Profile management (contact info, password, address)
+Analytics & Inventory: Dashboard for tracking donor metrics and inventory filters.
+Donation Records: Donor verification, entering vitals, and recording specific blood bag information after a donation.
+3. Administrator & Camp Host Portal
 
-</details>
+User Management: Approving and managing Medical Officers and Camp Hosts.
+Camp & Volunteer Tracking: Organizing blood donation camps and managing assigned volunteers.
+Stock & Requests: Handling blood component requests and managing stock transfers between facilities.
+4. Special Technical Features
 
-<details>
-<summary>Medical Staff Portal</summary>
-
-- Analytics dashboard for donor and inventory metrics  
-- Donor search and verification  
-- Donation record entry (vitals, blood bag info)  
-- Inventory management with filters
-
-</details>
-
-<details>
-<summary>Admin & Camp Host</summary>
-
-- Camp organization and tracking  
-- Volunteer list management  
-- Blood request and stock transfer handling  
-- User approval and management
-
-</details>
-
-<details>
-<summary>Special Features</summary>
-
-- Location-based donor matching (latitude/longitude-based)  
-- Automated SMS/Email notifications  
-- Mobile responsiveness across all pages  
-
-</details>
-<details>
-<summary>Tech stack/summary>
-
--frontend-React
--backend-Django with python
--database-postgreSql
-
-</details>
-
----
-
-## Tech Stack
-- **Frontend**: React
-- **Backend**: Django with Python
-- **Database**: PostgreSQL
-- **Maps Integration**: Google Maps API / Leaflet.js
-- **Notifications**: SMS & Email services (Twilio / SendGrid)
-
+Location-based Matching: Matches donors for emergencies using latitude/longitude mapping.
+Automated Notifications: Triggers SMS/Email system notifications for critical updates and emergencies.
+Role-Based Access Control: Secure routing (PrivateRoute, RoleRoute) to ensure donors, doctors, and admins only see their respective interfaces.

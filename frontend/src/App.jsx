@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
 import RoleRoute from './api/RoleRoute';
 import MainLayout from './components/layout/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
@@ -36,8 +35,7 @@ import BloodCamps from './pages/bloodcamp/BloodCamps';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
         <BrowserRouter>
           <ScrollToTop />
           <Routes>
@@ -115,7 +113,6 @@ function App() {
           </Routes>
         </BrowserRouter>
       </AuthProvider>
-    </ThemeProvider>
   );
 }
 

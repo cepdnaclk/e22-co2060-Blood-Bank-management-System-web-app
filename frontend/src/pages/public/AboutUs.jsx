@@ -5,7 +5,6 @@ import {
   Shield, Clock, Award, Moon, Sun,
 } from 'lucide-react';
 import { ABOUT_US } from '../../config/imageAssets';
-import { ThemeContext } from '../../context/theme/ThemeContext';
 import './AboutUs.css';
 
 /* ─── Static Data ─────────────────────────────────────────────────────────── */
@@ -75,11 +74,7 @@ const CORE_VALUES = [
 /* ─── Component ───────────────────────────────────────────────────────────── */
 
 export function AboutUs() {
-  // ── ONLY CHANGE: read theme from ThemeContext instead of local useState ──
-  // The Navbar calls the same toggleTheme(), so both stay in sync automatically.
-  const { theme } = useContext(ThemeContext);
-  const dark = theme === 'dark';
-  const t = dark ? 'dark' : 'light'; // theme shorthand for className suffixes
+  const t = 'light'; // Forced light mode since dark mode is removed
 
   // Scroll animations logic exactly like ContactPage
   useEffect(() => {

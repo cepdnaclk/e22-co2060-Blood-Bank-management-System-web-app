@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Edit2, Trash2, MessageSquare, Plus, Search, Eye, EyeOff, Download, Send, Filter } from 'lucide-react';
+import { Edit2, Trash2, MessageSquare, Plus, Search, Eye, EyeOff, Download, Send, Filter, Key } from 'lucide-react';
 import {
   fetchAllDoctors,
-
   deleteDoctor,
   createDoctorCredentials,
   sendMessageToDoctor,
   createDoctor,
   updateDoctor,
 } from '../../api/doctorService';
-import './DoctorsList.css';
+import DataTable from '../../components/ui/DataTable';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const DoctorsList = () => {
   const [doctors, setDoctors] = useState([]);
@@ -25,39 +25,24 @@ const DoctorsList = () => {
   const [messageSubject, setMessageSubject] = useState('');
   const [messageText, setMessageText] = useState('');
   
-  // Pagination
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
-  
-  // Sorting
-  const [sortBy, setSortBy] = useState('name'); // 'name', 'email', 'date'
-  const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
-  
-  // Filtering
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     specialization: '',
     hospital: '',
-    status: '', // 'active', 'inactive', ''
+    status: '',
   });
   
-  // Bulk actions
   const [selectedDoctors, setSelectedDoctors] = useState([]);
-  
-  // Edit mode
   const [editingDoctor, setEditingDoctor] = useState(null);
 
-  // Load all doctors on mount
   useEffect(() => {
     loadDoctors();
   }, []);
   
-  // Apply sorting and filtering whenever doctors change
   useEffect(() => {
     applyFiltersAndSort();
-  }, [doctors, filters, sortBy, sortOrder]);
+  }, [doctors, filters, searchTerm]);
 
-  // Load doctors from backend
   const loadDoctors = async () => {
     setLoading(true);
     const result = await fetchAllDoctors();
@@ -68,11 +53,9 @@ const DoctorsList = () => {
     setLoading(false);
   };
 
-  // Apply filters and sorting
   const applyFiltersAndSort = () => {
     let result = [...doctors];
     
-    // Apply filters
     if (filters.specialization) {
       result = result.filter(d => d.specialization === filters.specialization);
     }
@@ -85,7 +68,6 @@ const DoctorsList = () => {
       );
     }
     
-    // Apply search
     if (searchTerm.trim() !== '') {
       result = result.filter(d => 
         d.id.toString().includes(searchTerm) ||
@@ -94,57 +76,12 @@ const DoctorsList = () => {
       );
     }
     
-    // Apply sorting
-    result.sort((a, b) => {
-      let compareValue = 0;
-      
-      switch (sortBy) {
-        case 'name':
-          compareValue = a.full_name.localeCompare(b.full_name);
-          break;
-        case 'email':
-          compareValue = a.email.localeCompare(b.email);
-          break;
-        case 'date':
-          compareValue = new Date(a.created_at) - new Date(b.created_at);
-          break;
-        default:
-          compareValue = 0;
-      }
-      
-      return sortOrder === 'asc' ? compareValue : -compareValue;
-    });
-    
     setFilteredDoctors(result);
-    setCurrentPage(1); // Reset to first page
   };
   
-  // Search doctors by ID
-  const handleSearch = async (term) => {
-    setSearchTerm(term);
-  };
+  const getUniqueSpecializations = () => [...new Set(doctors.map(d => d.specialization).filter(Boolean))];
+  const getUniqueHospitals = () => [...new Set(doctors.map(d => d.hospital).filter(Boolean))];
   
-  // Get unique values for filter dropdowns
-  const getUniqueSpecializations = () => {
-    return [...new Set(doctors.map(d => d.specialization).filter(Boolean))];
-  };
-  
-  const getUniqueHospitals = () => {
-    return [...new Set(doctors.map(d => d.hospital).filter(Boolean))];
-  };
-
-  // Pagination
-  const getPaginatedData = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return filteredDoctors.slice(startIndex, endIndex);
-  };
-  
-  const getTotalPages = () => {
-    return Math.ceil(filteredDoctors.length / itemsPerPage);
-  };
-  
-  // Delete doctor
   const handleDelete = async (doctorId, doctorName) => {
     if (window.confirm(`Delete ${doctorName}? This action cannot be undone.`)) {
       const result = await deleteDoctor(doctorId);
@@ -157,16 +94,9 @@ const DoctorsList = () => {
     }
   };
   
-  // Delete multiple doctors
   const handleBulkDelete = async () => {
-    if (selectedDoctors.length === 0) {
-      alert('Please select doctors to delete');
-      return;
-    }
-    
-    if (!window.confirm(`Delete ${selectedDoctors.length} doctor(s)? This action cannot be undone.`)) {
-      return;
-    }
+    if (selectedDoctors.length === 0) return alert('Please select doctors to delete');
+    if (!window.confirm(`Delete ${selectedDoctors.length} doctor(s)? This action cannot be undone.`)) return;
     
     setLoading(true);
     for (const doctorId of selectedDoctors) {
@@ -176,16 +106,11 @@ const DoctorsList = () => {
     loadDoctors();
   };
   
-  // Send message to multiple doctors
   const handleBulkMessage = async () => {
-    if (selectedDoctors.length === 0) {
-      alert('Please select doctors to message');
-      return;
-    }
+    if (selectedDoctors.length === 0) return alert('Please select doctors to message');
     
     const subject = prompt('Enter message subject:');
     if (!subject) return;
-    
     const message = prompt('Enter message:');
     if (!message) return;
     
@@ -198,25 +123,14 @@ const DoctorsList = () => {
     loadDoctors();
   };
   
-  // Export to CSV
   const handleExportCSV = () => {
     const headers = ['ID', 'Name', 'Email', 'Specialization', 'Phone', 'License', 'Hospital', 'Status'];
     const data = filteredDoctors.map(d => [
-      d.id,
-      d.full_name,
-      d.email,
-      d.specialization || 'N/A',
-      d.phone || 'N/A',
-      d.license_number || 'N/A',
-      d.hospital || 'N/A',
-      d.is_active ? 'Active' : 'Inactive',
+      d.id, d.full_name, d.email, d.specialization || 'N/A', d.phone || 'N/A',
+      d.license_number || 'N/A', d.hospital || 'N/A', d.is_active ? 'Active' : 'Inactive',
     ]);
     
-    const csv = [
-      headers.join(','),
-      ...data.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
-    
+    const csv = [headers.join(','), ...data.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -225,31 +139,22 @@ const DoctorsList = () => {
     a.click();
   };
   
-  // Toggle doctor selection
   const handleSelectDoctor = (doctorId) => {
     setSelectedDoctors(prev =>
-      prev.includes(doctorId)
-        ? prev.filter(id => id !== doctorId)
-        : [...prev, doctorId]
+      prev.includes(doctorId) ? prev.filter(id => id !== doctorId) : [...prev, doctorId]
     );
   };
   
-  // Select all doctors on current page
   const handleSelectAll = () => {
-    const pageDoctorid = getPaginatedData().map(d => d.id);
-    if (selectedDoctors.length === pageDoctorid.length) {
+    if (selectedDoctors.length === filteredDoctors.length) {
       setSelectedDoctors([]);
     } else {
-      setSelectedDoctors(pageDoctorid);
+      setSelectedDoctors(filteredDoctors.map(d => d.id));
     }
   };
 
-  // Create credentials for doctor
   const handleCreateCredentials = async () => {
-    if (!tempPassword) {
-      alert('Please enter a temporary password');
-      return;
-    }
+    if (!tempPassword) return alert('Please enter a temporary password');
     const result = await createDoctorCredentials(selectedDoctor.id, tempPassword);
     if (result.success) {
       alert(`Credentials created! Username: ${selectedDoctor.email}\nPassword: ${tempPassword}`);
@@ -260,17 +165,9 @@ const DoctorsList = () => {
     }
   };
 
-  // Send message to doctor
   const handleSendMessage = async () => {
-    if (!messageSubject || !messageText) {
-      alert('Please fill in subject and message');
-      return;
-    }
-    const result = await sendMessageToDoctor(
-      selectedDoctor.id,
-      messageSubject,
-      messageText
-    );
+    if (!messageSubject || !messageText) return alert('Please fill in subject and message');
+    const result = await sendMessageToDoctor(selectedDoctor.id, messageSubject, messageText);
     if (result.success) {
       alert('Message sent successfully');
       setShowMessageModal(false);
@@ -281,301 +178,144 @@ const DoctorsList = () => {
     }
   };
   
-  // Open edit modal
   const handleEditClick = (doctor) => {
     setEditingDoctor(doctor);
     setShowAddModal(true);
   };
-  
-  // Close add modal
-  const handleCloseAddModal = () => {
-    setShowAddModal(false);
-    setEditingDoctor(null);
-  };
 
   return (
-    <div className="doctors-list-container">
-      <div className="doctors-header">
-        <h2>Doctors Management</h2>
-        <div className="header-actions">
-          <button className="btn-primary" onClick={() => setShowAddModal(true)}>
-            <Plus size={20} /> Add New Doctor
-          </button>
-          <button className="btn-secondary" onClick={handleExportCSV}>
-            <Download size={20} /> Export CSV
-          </button>
-          <button 
-            className="btn-secondary" 
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter size={20} /> Filters
-          </button>
+    <div>
+      <div className="card">
+        <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h2 className="card-title">Doctors Management</h2>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button className="dashboard btn btn-primary" onClick={() => setShowAddModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={18} /> Add New Doctor
+            </button>
+            <button className="dashboard btn btn-outline" onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Download size={18} /> Export CSV
+            </button>
+            <button className="dashboard btn btn-outline" onClick={() => setShowFilters(!showFilters)} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Filter size={18} /> Filters
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Search Bar */}
-      <div className="search-container">
-        <Search size={20} />
-        <input
-          type="text"
-          placeholder="Search by ID, name, or email..."
-          value={searchTerm}
-          onChange={(e) => handleSearch(e.target.value)}
-          className="search-input"
-        />
-      </div>
-      
-      {/* Filters */}
-      {showFilters && (
-        <div className="filters-container">
-          <div className="filter-group">
-            <label>Specialization</label>
-            <select
-              value={filters.specialization}
-              onChange={(e) => setFilters({...filters, specialization: e.target.value})}
-            >
-              <option value="">All</option>
-              {getUniqueSpecializations().map(spec => (
-                <option key={spec} value={spec}>{spec}</option>
-              ))}
-            </select>
+        <div className="card-body">
+          <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flex: 1, minWidth: '300px' }}>
+              <Search size={18} style={{ position: 'absolute', left: '12px', top: '10px', color: 'var(--color-text-muted)' }} />
+              <input
+                type="text"
+                placeholder="Search by ID, name, or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}
+              />
+            </div>
           </div>
-          
-          <div className="filter-group">
-            <label>Hospital</label>
-            <select
-              value={filters.hospital}
-              onChange={(e) => setFilters({...filters, hospital: e.target.value})}
-            >
-              <option value="">All</option>
-              {getUniqueHospitals().map(hospital => (
-                <option key={hospital} value={hospital}>{hospital}</option>
-              ))}
-            </select>
-          </div>
-          
-          <div className="filter-group">
-            <label>Status</label>
-            <select
-              value={filters.status}
-              onChange={(e) => setFilters({...filters, status: e.target.value})}
-            >
-              <option value="">All</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-          </div>
-          
-          <button 
-            className="btn-secondary"
-            onClick={() => setFilters({specialization: '', hospital: '', status: ''})}
-          >
-            Clear Filters
-          </button>
-        </div>
-      )}
-      
-      {/* Sorting */}
-      <div className="sorting-container">
-        <label>Sort by:</label>
-        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-          <option value="name">Name</option>
-          <option value="email">Email</option>
-          <option value="date">Date Created</option>
-        </select>
-        
-        <select 
-          value={sortOrder} 
-          onChange={(e) => setSortOrder(e.target.value)}
-          style={{marginLeft: '10px'}}
-        >
-          <option value="asc">Ascending</option>
-          <option value="desc">Descending</option>
-        </select>
-      </div>
-      
-      {/* Bulk Actions */}
-      {selectedDoctors.length > 0 && (
-        <div className="bulk-actions">
-          <span>{selectedDoctors.length} doctor(s) selected</span>
-          <button className="btn-info" onClick={handleBulkMessage}>
-            <Send size={16} /> Message Selected
-          </button>
-          <button className="btn-danger" onClick={handleBulkDelete}>
-            <Trash2 size={16} /> Delete Selected
-          </button>
-        </div>
-      )}
 
-      {/* Doctors Table */}
-      <div className="table-container">
-        {loading ? (
-          <div className="loading">Loading doctors...</div>
-        ) : filteredDoctors.length === 0 ? (
-          <div className="no-data">No doctors found</div>
-        ) : (
-          <>
-            <table className="doctors-table">
-              <thead>
-                <tr>
-                  <th>
-                    <input 
-                      type="checkbox"
-                      onChange={handleSelectAll}
-                      checked={selectedDoctors.length === getPaginatedData().length && getPaginatedData().length > 0}
-                    />
-                  </th>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Specialization</th>
-                  <th>Phone</th>
-                  <th>License #</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+          {showFilters && (
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px', padding: '15px', backgroundColor: 'var(--color-secondary-light)', borderRadius: 'var(--radius-md)' }}>
+              <select value={filters.specialization} onChange={(e) => setFilters({...filters, specialization: e.target.value})} style={{ padding: '8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                <option value="">All Specializations</option>
+                {getUniqueSpecializations().map(spec => <option key={spec} value={spec}>{spec}</option>)}
+              </select>
+              <select value={filters.hospital} onChange={(e) => setFilters({...filters, hospital: e.target.value})} style={{ padding: '8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                <option value="">All Hospitals</option>
+                {getUniqueHospitals().map(hospital => <option key={hospital} value={hospital}>{hospital}</option>)}
+              </select>
+              <select value={filters.status} onChange={(e) => setFilters({...filters, status: e.target.value})} style={{ padding: '8px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+                <option value="">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+              <button className="dashboard btn btn-outline" onClick={() => setFilters({specialization: '', hospital: '', status: ''})}>Clear Filters</button>
+            </div>
+          )}
+
+          {selectedDoctors.length > 0 && (
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', alignItems: 'center', padding: '10px', backgroundColor: 'var(--color-primary-light)', borderRadius: 'var(--radius-md)' }}>
+              <span style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{selectedDoctors.length} doctor(s) selected</span>
+              <button className="dashboard btn" style={{ backgroundColor: 'var(--color-info)', color: 'white', display: 'flex', gap: '8px' }} onClick={handleBulkMessage}>
+                <Send size={16} /> Message Selected
+              </button>
+              <button className="dashboard btn" style={{ backgroundColor: 'var(--color-critical)', color: 'white', display: 'flex', gap: '8px' }} onClick={handleBulkDelete}>
+                <Trash2 size={16} /> Delete Selected
+              </button>
+            </div>
+          )}
+
+          {loading ? <p>Loading doctors...</p> : (
+            <DataTable 
+              columns={[
+                <input type="checkbox" onChange={handleSelectAll} checked={selectedDoctors.length === filteredDoctors.length && filteredDoctors.length > 0} />,
+                'ID', 'Name', 'Email', 'Specialization', 'Phone', 'License #', 'Status', 'Actions'
+              ]}
+              data={filteredDoctors}
+              emptyMessage="No doctors found"
+              renderRow={(doctor) => (
+                <tr key={doctor.id}>
+                  <td>
+                    <input type="checkbox" checked={selectedDoctors.includes(doctor.id)} onChange={() => handleSelectDoctor(doctor.id)} />
+                  </td>
+                  <td>#{doctor.id}</td>
+                  <td><strong>{doctor.full_name}</strong></td>
+                  <td>{doctor.email}</td>
+                  <td>{doctor.specialization || '-'}</td>
+                  <td>{doctor.phone || '-'}</td>
+                  <td>{doctor.license_number || '-'}</td>
+                  <td><StatusBadge status={doctor.is_active ? 'Active' : 'Inactive'} /></td>
+                  <td style={{ display: 'flex', gap: '8px' }}>
+                    <button className="dashboard btn btn-outline" title="Edit" onClick={() => handleEditClick(doctor)} style={{ padding: '6px' }}><Edit2 size={16} /></button>
+                    <button className="dashboard btn btn-outline" title="Credentials" onClick={() => { setSelectedDoctor(doctor); setShowCredentialsModal(true); }} style={{ padding: '6px' }}><Key size={16} /></button>
+                    <button className="dashboard btn btn-outline" title="Message" onClick={() => { setSelectedDoctor(doctor); setShowMessageModal(true); }} style={{ padding: '6px' }}><MessageSquare size={16} /></button>
+                    <button className="dashboard btn btn-outline" title="Delete" onClick={() => handleDelete(doctor.id, doctor.full_name)} style={{ padding: '6px', color: 'var(--color-critical)' }}><Trash2 size={16} /></button>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {getPaginatedData().map((doctor) => (
-                  <tr key={doctor.id}>
-                    <td>
-                      <input 
-                        type="checkbox"
-                        checked={selectedDoctors.includes(doctor.id)}
-                        onChange={() => handleSelectDoctor(doctor.id)}
-                      />
-                    </td>
-                    <td className="doctor-id">{doctor.id}</td>
-                    <td className="doctor-name">{doctor.full_name}</td>
-                    <td className="doctor-email">{doctor.email}</td>
-                    <td>{doctor.specialization || 'N/A'}</td>
-                    <td>{doctor.phone || 'N/A'}</td>
-                    <td>{doctor.license_number || 'N/A'}</td>
-                    <td>
-                      <span className={`status ${doctor.is_active ? 'active' : 'inactive'}`}>
-                        {doctor.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="actions">
-                      <button
-                        className="btn-edit"
-                        title="Edit Doctor"
-                        onClick={() => handleEditClick(doctor)}
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        className="btn-credentials"
-                        title="Create/Reset Credentials"
-                        onClick={() => {
-                          setSelectedDoctor(doctor);
-                          setShowCredentialsModal(true);
-                        }}
-                      >
-                        🔐
-                      </button>
-                      <button
-                        className="btn-message"
-                        title="Send Message"
-                        onClick={() => {
-                          setSelectedDoctor(doctor);
-                          setShowMessageModal(true);
-                        }}
-                      >
-                        <MessageSquare size={16} />
-                      </button>
-                      <button
-                        className="btn-delete"
-                        title="Delete Doctor"
-                        onClick={() => handleDelete(doctor.id, doctor.full_name)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            
-            {/* Pagination */}
-            {getTotalPages() > 1 && (
-              <div className="pagination">
-                <button 
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </button>
-                
-                <div className="page-numbers">
-                  {Array.from({length: getTotalPages()}, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={currentPage === page ? 'active' : ''}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-                
-                <button 
-                  onClick={() => setCurrentPage(prev => Math.min(getTotalPages(), prev + 1))}
-                  disabled={currentPage === getTotalPages()}
-                >
-                  Next
-                </button>
-                
-                <span className="page-info">
-                  Page {currentPage} of {getTotalPages()} | Total: {filteredDoctors.length} doctors
-                </span>
-              </div>
-            )}
-          </>
-        )}
+              )}
+            />
+          )}
+        </div>
       </div>
 
-      {/* Add/Edit Doctor Modal */}
+      {/* Add/Edit Modal */}
       {showAddModal && (
         <AddDoctorModal 
-          onClose={handleCloseAddModal} 
+          onClose={() => { setShowAddModal(false); setEditingDoctor(null); }} 
           onSuccess={loadDoctors}
           editingDoctor={editingDoctor}
         />
       )}
 
-      {/* Create Credentials Modal */}
+      {/* Credentials Modal */}
       {showCredentialsModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Create Login Credentials</h3>
-            <p>Doctor: {selectedDoctor?.full_name}</p>
-            <div className="form-group">
-              <label>Temporary Password</label>
-              <div className="password-input-wrapper">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={tempPassword}
-                  onChange={(e) => setTempPassword(e.target.value)}
-                  placeholder="Enter temporary password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="toggle-password"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
-              <small>Username: {selectedDoctor?.email}</small>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '400px', backgroundColor: 'var(--color-surface)' }}>
+            <div className="card-header">
+              <h3 className="card-title">Create Login Credentials</h3>
             </div>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowCredentialsModal(false)}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={handleCreateCredentials}>
-                Create Credentials
-              </button>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <p><strong>Doctor:</strong> {selectedDoctor?.full_name}</p>
+              <div>
+                <label className="stat-label">Temporary Password</label>
+                <div style={{ display: 'flex', position: 'relative' }}>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={tempPassword}
+                    onChange={(e) => setTempPassword(e.target.value)}
+                    style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', top: '10px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-muted)' }}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <small style={{ color: 'var(--color-text-muted)', marginTop: '4px', display: 'block' }}>Username: {selectedDoctor?.email}</small>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button className="dashboard btn btn-outline" onClick={() => setShowCredentialsModal(false)}>Cancel</button>
+                <button className="dashboard btn btn-primary" onClick={handleCreateCredentials}>Create</button>
+              </div>
             </div>
           </div>
         </div>
@@ -583,35 +323,35 @@ const DoctorsList = () => {
 
       {/* Message Modal */}
       {showMessageModal && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Send Message to Doctor</h3>
-            <p>Doctor: {selectedDoctor?.full_name}</p>
-            <div className="form-group">
-              <label>Subject</label>
-              <input
-                type="text"
-                value={messageSubject}
-                onChange={(e) => setMessageSubject(e.target.value)}
-                placeholder="Message subject"
-              />
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: '400px', backgroundColor: 'var(--color-surface)' }}>
+            <div className="card-header">
+              <h3 className="card-title">Send Message to Doctor</h3>
             </div>
-            <div className="form-group">
-              <label>Message</label>
-              <textarea
-                value={messageText}
-                onChange={(e) => setMessageText(e.target.value)}
-                placeholder="Enter your message"
-                rows="4"
-              />
-            </div>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setShowMessageModal(false)}>
-                Cancel
-              </button>
-              <button className="btn-primary" onClick={handleSendMessage}>
-                Send Message
-              </button>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <p><strong>Doctor:</strong> {selectedDoctor?.full_name}</p>
+              <div>
+                <label className="stat-label">Subject</label>
+                <input
+                  type="text"
+                  value={messageSubject}
+                  onChange={(e) => setMessageSubject(e.target.value)}
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}
+                />
+              </div>
+              <div>
+                <label className="stat-label">Message</label>
+                <textarea
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  rows="4"
+                  style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button className="dashboard btn btn-outline" onClick={() => setShowMessageModal(false)}>Cancel</button>
+                <button className="dashboard btn btn-primary" onClick={handleSendMessage}>Send</button>
+              </div>
             </div>
           </div>
         </div>
@@ -620,9 +360,6 @@ const DoctorsList = () => {
   );
 };
 
-
-
-// Add/Edit Doctor Modal Component
 const AddDoctorModal = ({ onClose, onSuccess, editingDoctor }) => {
   const [formData, setFormData] = useState(
     editingDoctor ? {
@@ -634,13 +371,7 @@ const AddDoctorModal = ({ onClose, onSuccess, editingDoctor }) => {
       phone: editingDoctor.phone || '',
       hospital: editingDoctor.hospital || '',
     } : {
-      username: '',
-      email: '',
-      full_name: '',
-      specialization: '',
-      license_number: '',
-      phone: '',
-      hospital: '',
+      username: '', email: '', full_name: '', specialization: '', license_number: '', phone: '', hospital: '',
     }
   );
   const [loading, setLoading] = useState(false);
@@ -648,28 +379,16 @@ const AddDoctorModal = ({ onClose, onSuccess, editingDoctor }) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors(prev => ({...prev, [name]: ''}));
-    }
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors(prev => ({...prev, [name]: ''}));
   };
   
-  // Validate form
   const validateForm = () => {
     const newErrors = {};
-    
     if (!formData.full_name.trim()) newErrors.full_name = 'Full name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.email.includes('@')) newErrors.email = 'Invalid email format';
-    
-    if (!editingDoctor && !formData.username.trim()) {
-      newErrors.username = 'Username is required';
-    }
-    
+    if (!editingDoctor && !formData.username.trim()) newErrors.username = 'Username is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone is required';
     if (!formData.specialization.trim()) newErrors.specialization = 'Specialization is required';
     
@@ -679,39 +398,24 @@ const AddDoctorModal = ({ onClose, onSuccess, editingDoctor }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
     
     setLoading(true);
-
     try {
       let result;
-      
       if (editingDoctor) {
-        // Update existing doctor
         result = await updateDoctor(editingDoctor.id, formData);
-        if (result.success) {
-          alert('Doctor updated successfully');
-          onSuccess();
-          onClose();
-        } else {
-          alert('Failed to update doctor: ' + result.message);
-        }
       } else {
-        // Create new doctor
         result = await createDoctor(formData);
-        if (result.success) {
-          alert('Doctor added successfully');
-          onSuccess();
-          onClose();
-        } else {
-          alert('Failed to add doctor: ' + result.message);
-          if (result.errors) {
-            setErrors(result.errors);
-          }
-        }
+      }
+      
+      if (result.success) {
+        alert(`Doctor ${editingDoctor ? 'updated' : 'added'} successfully`);
+        onSuccess();
+        onClose();
+      } else {
+        alert(`Failed to ${editingDoctor ? 'update' : 'add'} doctor: ` + result.message);
+        if (result.errors) setErrors(result.errors);
       }
     } catch (error) {
       alert('Error: ' + error.message);
@@ -721,115 +425,55 @@ const AddDoctorModal = ({ onClose, onSuccess, editingDoctor }) => {
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="modal wide">
-        <h3>{editingDoctor ? 'Edit Doctor' : 'Add New Doctor'}</h3>
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Full Name *</label>
-              <input
-                type="text"
-                name="full_name"
-                value={formData.full_name}
-                onChange={handleInputChange}
-                required
-                className={errors.full_name ? 'error' : ''}
-              />
-              {errors.full_name && <small className="error-text">{errors.full_name}</small>}
+    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+      <div className="card" style={{ width: '600px', backgroundColor: 'var(--color-surface)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div className="card-header">
+          <h3 className="card-title">{editingDoctor ? 'Edit Doctor' : 'Add New Doctor'}</h3>
+        </div>
+        <div className="card-body">
+          <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '15px', gridTemplateColumns: '1fr 1fr' }}>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label className="stat-label">Full Name *</label>
+              <input type="text" name="full_name" value={formData.full_name} onChange={handleInputChange} required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+              {errors.full_name && <small style={{ color: 'var(--color-critical)' }}>{errors.full_name}</small>}
             </div>
-            <div className="form-group">
-              <label>Email *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
-                disabled={editingDoctor ? true : false}
-                className={errors.email ? 'error' : ''}
-              />
-              {errors.email && <small className="error-text">{errors.email}</small>}
+            <div>
+              <label className="stat-label">Email *</label>
+              <input type="email" name="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingDoctor} style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+              {errors.email && <small style={{ color: 'var(--color-critical)' }}>{errors.email}</small>}
             </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Username {!editingDoctor && '*'}</label>
-              <input
-                type="text"
-                name="username"
-                value={formData.username}
-                onChange={handleInputChange}
-                required={!editingDoctor}
-                disabled={editingDoctor ? true : false}
-                className={errors.username ? 'error' : ''}
-              />
-              {errors.username && <small className="error-text">{errors.username}</small>}
-              {editingDoctor && <small>Cannot change username for existing doctor</small>}
+            <div>
+              <label className="stat-label">Username {!editingDoctor && '*'}</label>
+              <input type="text" name="username" value={formData.username} onChange={handleInputChange} required={!editingDoctor} disabled={!!editingDoctor} style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+              {errors.username && <small style={{ color: 'var(--color-critical)' }}>{errors.username}</small>}
             </div>
-            <div className="form-group">
-              <label>Phone *</label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleInputChange}
-                required
-                className={errors.phone ? 'error' : ''}
-              />
-              {errors.phone && <small className="error-text">{errors.phone}</small>}
+            <div>
+              <label className="stat-label">Phone *</label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+              {errors.phone && <small style={{ color: 'var(--color-critical)' }}>{errors.phone}</small>}
             </div>
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label>Specialization *</label>
-              <input
-                type="text"
-                name="specialization"
-                value={formData.specialization}
-                onChange={handleInputChange}
-                required
-                className={errors.specialization ? 'error' : ''}
-              />
-              {errors.specialization && <small className="error-text">{errors.specialization}</small>}
+            <div>
+              <label className="stat-label">Specialization *</label>
+              <input type="text" name="specialization" value={formData.specialization} onChange={handleInputChange} required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+              {errors.specialization && <small style={{ color: 'var(--color-critical)' }}>{errors.specialization}</small>}
             </div>
-            <div className="form-group">
-              <label>License Number</label>
-              <input
-                type="text"
-                name="license_number"
-                value={formData.license_number}
-                onChange={handleInputChange}
-              />
+            <div>
+              <label className="stat-label">License Number</label>
+              <input type="text" name="license_number" value={formData.license_number} onChange={handleInputChange} style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label>Hospital</label>
-            <input
-              type="text"
-              name="hospital"
-              value={formData.hospital}
-              onChange={handleInputChange}
-            />
-          </div>
-
-          <div className="modal-actions">
-            <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancel
-            </button>
-            <button type="submit" className="btn-primary" disabled={loading}>
-              {loading ? (editingDoctor ? 'Updating...' : 'Saving...') : (editingDoctor ? 'Update Doctor' : 'Add Doctor')}
-            </button>
-          </div>
-        </form>
+            <div>
+              <label className="stat-label">Hospital</label>
+              <input type="text" name="hospital" value={formData.hospital} onChange={handleInputChange} style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+              <button type="button" className="dashboard btn btn-outline" onClick={onClose} disabled={loading}>Cancel</button>
+              <button type="submit" className="dashboard btn btn-primary" disabled={loading}>{loading ? 'Saving...' : 'Save Doctor'}</button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );
 };
 
 export default DoctorsList;
-
-

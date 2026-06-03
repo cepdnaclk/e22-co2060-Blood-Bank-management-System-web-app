@@ -1,38 +1,13 @@
-import axios from 'axios';
-
-// Get token from localStorage
-const getAuthToken = () => {
-  const stored = localStorage.getItem('authTokens');
-  return stored ? JSON.parse(stored)?.access : null;
-};
-
-// Create axios instance for doctor operations
-const doctorAPI = axios.create({
-  baseURL: 'http://localhost:8000/api/v1/adminDashboard',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Add token to all requests
-doctorAPI.interceptors.request.use((config) => {
-  const token = getAuthToken();
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+import api from './api';
 
 /**
  * FETCH ALL DOCTORS
- * GET /doctors/
+ * GET /adminDashboard/doctors/list/
  * Returns: List of all doctors
  */
 export const fetchAllDoctors = async () => {
   try {
-    const response = await doctorAPI.get('/doctors/list/');
+    const response = await api.get('adminDashboard/doctors/list/');
     return {
       success: true,
       data: response.data,
@@ -49,12 +24,12 @@ export const fetchAllDoctors = async () => {
 
 /**
  * GET SINGLE DOCTOR BY ID
- * GET /doctors/:id/
+ * GET /adminDashboard/doctor/profile/:id/
  * Returns: Doctor details
  */
 export const fetchDoctorById = async (id) => {
   try {
-    const response = await doctorAPI.get(`/doctor/profile/${id}/`);
+    const response = await api.get(`adminDashboard/doctor/profile/${id}/`);
     return {
       success: true,
       data: response.data,
@@ -71,12 +46,12 @@ export const fetchDoctorById = async (id) => {
 
 /**
  * SEARCH DOCTORS BY ID
- * GET /doctors/?search=:searchTerm
+ * GET /adminDashboard/doctors/list/?search=:searchTerm
  * Returns: Filtered doctors list
  */
 export const searchDoctors = async (searchTerm) => {
   try {
-    const response = await doctorAPI.get('/doctors/list', {
+    const response = await api.get('adminDashboard/doctors/list/', {
       params: { search: searchTerm },
     });
     return {
@@ -95,7 +70,7 @@ export const searchDoctors = async (searchTerm) => {
 
 /**
  * CREATE NEW DOCTOR
- * POST /doctors/
+ * POST /adminDashboard/doctor/create/
  * Payload:
  * {
  *   username: string,
@@ -110,7 +85,7 @@ export const searchDoctors = async (searchTerm) => {
  */
 export const createDoctor = async (doctorData) => {
   try {
-    const response = await doctorAPI.post('/doctor/create/', doctorData);
+    const response = await api.post('adminDashboard/doctor/create/', doctorData);
     return {
       success: true,
       data: response.data,
@@ -128,13 +103,13 @@ export const createDoctor = async (doctorData) => {
 
 /**
  * UPDATE DOCTOR DETAILS
- * PUT /doctors/:id/
+ * PUT /adminDashboard/doctor/profile/:id/
  * Payload: Any fields to update
  * Returns: Updated doctor object
  */
 export const updateDoctor = async (doctorId, updateData) => {
   try {
-    const response = await doctorAPI.put(`/doctor/profile/${doctorId}/`, updateData);
+    const response = await api.put(`adminDashboard/doctor/profile/${doctorId}/`, updateData);
     return {
       success: true,
       data: response.data,
@@ -152,7 +127,7 @@ export const updateDoctor = async (doctorId, updateData) => {
 
 /**
  * CREATE LOGIN CREDENTIALS FOR DOCTOR
- * POST /doctors/:id/create-credentials/
+ * POST /adminDashboard/doctors/:id/create-credentials/
  * Payload:
  * {
  *   password: string (temporary password)
@@ -161,7 +136,7 @@ export const updateDoctor = async (doctorId, updateData) => {
  */
 export const createDoctorCredentials = async (doctorId, password) => {
   try {
-    const response = await doctorAPI.post(`/doctors/${doctorId}/create-credentials/`, {
+    const response = await api.post(`adminDashboard/doctors/${doctorId}/create-credentials/`, {
       password,
     });
     return {
@@ -180,7 +155,7 @@ export const createDoctorCredentials = async (doctorId, password) => {
 
 /**
  * RESET DOCTOR PASSWORD
- * POST /doctors/:id/reset-password/
+ * POST /adminDashboard/doctors/:id/reset-password/
  * Payload:
  * {
  *   new_password: string
@@ -189,7 +164,7 @@ export const createDoctorCredentials = async (doctorId, password) => {
  */
 export const resetDoctorPassword = async (doctorId, newPassword) => {
   try {
-    const response = await doctorAPI.post(`/doctors/${doctorId}/reset-password/`, {
+    const response = await api.post(`adminDashboard/doctors/${doctorId}/reset-password/`, {
       new_password: newPassword,
     });
     return {
@@ -208,12 +183,12 @@ export const resetDoctorPassword = async (doctorId, newPassword) => {
 
 /**
  * DELETE DOCTOR
- * DELETE /doctors/:id/
+ * DELETE /adminDashboard/doctor/profile/:id/
  * Returns: Success message
  */
 export const deleteDoctor = async (doctorId) => {
   try {
-    const response = await doctorAPI.delete(`/doctor/profile/${doctorId}/`);
+    const response = await api.delete(`adminDashboard/doctor/profile/${doctorId}/`);
     return {
       success: true,
       data: response.data,
@@ -230,7 +205,7 @@ export const deleteDoctor = async (doctorId) => {
 
 /**
  * SEND MESSAGE TO DOCTOR
- * POST /doctors/:id/send-message/
+ * POST /adminDashboard/doctors/:id/send-message/
  * Payload:
  * {
  *   subject: string,
@@ -240,7 +215,7 @@ export const deleteDoctor = async (doctorId) => {
  */
 export const sendMessageToDoctor = async (doctorId, subject, message) => {
   try {
-    const response = await doctorAPI.post(`/doctors/${doctorId}/send-message/`, {
+    const response = await api.post(`adminDashboard/doctors/${doctorId}/send-message/`, {
       subject,
       message,
     });
@@ -260,12 +235,12 @@ export const sendMessageToDoctor = async (doctorId, subject, message) => {
 
 /**
  * GET DOCTOR STATISTICS (Optional - for dashboard)
- * GET /doctors/stats/
+ * GET /adminDashboard/doctor/total/
  * Returns: Doctor count, active doctors, etc.
  */
 export const getDoctorStats = async () => {
   try {
-    const response = await doctorAPI.get('/doctor/total/');
+    const response = await api.get('adminDashboard/doctor/total/');
     return {
       success: true,
       data: response.data,
@@ -280,4 +255,4 @@ export const getDoctorStats = async () => {
   }
 };
 
-export default doctorAPI;
+export default api;

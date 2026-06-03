@@ -11,21 +11,25 @@ import {
   sendRegistrationToScreening,
   getOrganizerDonatedHistory
 } from '../../services/campService';
-import { LayoutDashboard, Calendar, MapPin, Clock, Plus, CheckCircle, LogOut, User, Activity, Bell, ChevronLeft, Settings, Mail, Power, Moon, Sun, Menu, X, History, Droplet, Users, AlertTriangle, CalendarDays } from 'lucide-react';
+import { 
+  LayoutDashboard, Calendar, MapPin, Clock, Plus, CheckCircle, 
+  LogOut, User, Activity, Bell, Settings, History, Droplet, 
+  Users, AlertTriangle, CalendarDays, ClipboardList
+} from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import Swal from 'sweetalert2';
 import api from '../../api/api';
-import './CampDashboard.css';
+
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import StatCard from '../../components/ui/StatCard';
+import DataTable from '../../components/ui/DataTable';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const CampDashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [isSidebarClosed, setIsSidebarClosed] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const [view, setView] = useState('camps');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [camps, setCamps] = useState([]);
   const [selectedCamp, setSelectedCamp] = useState(null);
   const [registrations, setRegistrations] = useState([]);
@@ -43,8 +47,6 @@ const CampDashboard = () => {
     location: '',
     description: '',
   });
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   const groupedRegistrations = useMemo(() => ({
     registered: registrations.filter((r) => r.status === 'registered'),
@@ -112,7 +114,7 @@ const CampDashboard = () => {
     try {
       await createBloodCamp(newCamp);
       Swal.fire('Success', 'Blood Camp created.', 'success');
-      setView('camps');
+      setActiveTab('dashboard');
       setNewCamp({ title: '', date: '', start_time: '', end_time: '', location: '', description: '' });
       await loadCamps();
     } catch (error) {
@@ -142,378 +144,307 @@ const CampDashboard = () => {
   const handleWorkflowNotifications = async () => {
     const html = notifications.length
       ? `<div style="text-align:left;max-height:300px;overflow:auto;">${notifications.map(
-          (n) => `<div style="padding:10px 0;border-bottom:1px solid #f1f5f9;">
-                    <strong style="color:#991b1b;">${n.event_type}</strong><br/>
-                    <span style="color:#334155;">${n.message}</span><br/>
-                    <small style="color:#94a3b8;">${new Date(n.created_at).toLocaleString()}</small>
+          (n) => `<div style="padding:10px 0;border-bottom:1px solid var(--color-border);">
+                    <strong style="color:var(--color-critical);">${n.event_type}</strong><br/>
+                    <span style="color:var(--color-text-main);">${n.message}</span><br/>
+                    <small style="color:var(--color-text-muted);">${new Date(n.created_at).toLocaleString()}</small>
                   </div>`
         ).join('')}</div>`
-      : '<p style="color:#64748b;">No notifications.</p>';
-    await Swal.fire({ title: 'Workflow Notifications', html, width: 700, confirmButtonColor: '#B22222' });
+      : '<p style="color:var(--color-text-muted);">No notifications.</p>';
+    await Swal.fire({ title: 'Workflow Notifications', html, width: 700 });
     await Promise.all(notifications.filter((n) => !n.is_read).map((n) => markWorkflowNotificationRead(n.id)));
     await loadNotifications();
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
   };
 
   const profileUser = profileData?.user || {};
   const profile = profileData?.profile || {};
 
-  return (
-    <div className={`camp-dashboard-container ${isDarkMode ? 'dark' : ''}`}>
-      {/* Mobile Overlay */}
-      {isMobileMenuOpen && <div className="mobile-overlay" onClick={() => setIsMobileMenuOpen(false)}></div>}
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-      <nav className={`sidebar ${isSidebarClosed ? 'close' : ''} ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
-        <header>
-          <div className="brand">
-            <div className="logo-text label-text">
-              <span className="brand-name">BloodCamp</span>
-            </div>
-          </div>
-          <div className="sidebar-toggle desktop-only" onClick={() => setIsSidebarClosed(!isSidebarClosed)}>
-            <ChevronLeft />
-          </div>
-          <div className="mobile-close-btn mobile-only" onClick={() => setIsMobileMenuOpen(false)}>
-            <X size={24} />
-          </div>
-        </header>
+  const menuItems = [
+    { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Overview', onClick: () => setSelectedCamp(null) },
+    { id: 'history', icon: <History size={20} />, label: 'Donated History', onClick: () => setSelectedCamp(null) },
+    { id: 'create', icon: <Plus size={20} />, label: 'Create Camp' },
+    { id: 'profile', icon: <Settings size={20} />, label: 'Settings', onClick: () => setSelectedCamp(null) },
+  ];
 
-        <div className="sidebar-user">
-          <div className="user">
-            <div className="user-avatar">
-              <User size={30} />
-            </div>
-            <div className="user-info label-text">
-              <h6>{profile?.fullName || profileUser?.username || user?.username || 'Organizer'}</h6>
-              <span>{profileUser?.role || user?.role || 'Administrator'}</span>
-            </div>
-          </div>
-
-          <div className="user-social">
-            <ul>
-              <li><button title="Settings"><Settings size={18} /></button></li>
-              <li><button title="Messages"><Mail size={18} /></button></li>
-              <li><button onClick={() => { setView('profile'); setSelectedCamp(null); }} title="Profile"><User size={18} /></button></li>
-              <li><button onClick={handleLogout} title="Logout"><Power size={18} /></button></li>
-            </ul>
-          </div>
-        </div>
-
-        <ul className="side-menu">
-          <li className={`slide-link ${view === 'camps' && !selectedCamp ? 'active' : ''}`}>
-            <button onClick={() => { setView('camps'); setSelectedCamp(null); }}>
-              <div className="icon"><LayoutDashboard size={20} /></div>
-              <span className="label-text">Overview</span>
-            </button>
-          </li>
-          <li className={`slide-link ${view === 'history' ? 'active' : ''}`}>
-            <button onClick={() => { setView('history'); setSelectedCamp(null); }}>
-              <div className="icon"><History size={20} /></div>
-              <span className="label-text">Donated History</span>
-            </button>
-          </li>
-          <li className={`slide-link ${view === 'create' ? 'active' : ''}`}>
-            <button onClick={() => setView('create')}>
-              <div className="icon"><Plus size={20} /></div>
-              <span className="label-text">Create Camp</span>
-            </button>
-          </li>
-          <li className={`slide-link ${view === 'profile' ? 'active' : ''}`}>
-            <button onClick={() => { setView('profile'); setSelectedCamp(null); }}>
-              <div className="icon"><User size={20} /></div>
-              <span className="label-text">Settings</span>
-            </button>
-          </li>
-        </ul>
-
-        <div className="mode-box">
-          <div className="sun-moon-box">
-            <Moon className="icon moon-icon" size={18} />
-            <Sun className="icon sun-icon" size={18} />
-          </div>
-          <span className="mode-text label-text">Dark mode</span>
-          <div className="toggle-switch" onClick={() => setIsDarkMode(!isDarkMode)}>
-            <span className="switch"></span>
-          </div>
-        </div>
-      </nav>
-
-      <div className="main-container">
-        <header className="camp-header">
-          <div className="header-left">
-            <button className="mobile-menu-btn" onClick={() => setIsMobileMenuOpen(true)}>
-              <Menu size={24} />
-            </button>
-            <h1>Welcome, {profile?.fullName || profileUser?.username || user?.username}</h1>
-          </div>
-          <div className="header-status" style={{ display: 'flex', gap: 10 }}>
-            <span className="live-badge"><Activity size={12} className="pulse-icon" /> Live Updates On</span>
-            <button className="view-regs-btn" onClick={handleWorkflowNotifications}>
-              <Bell size={14} /> Notifications ({unreadCount})
-            </button>
-          </div>
-        </header>
-
-        <div className="camp-content">
-          {view === 'create' && (
-            <div className="camp-form-card animate-in">
-              <h2>Create New Blood Camp</h2>
-              <form onSubmit={handleCreateCamp}>
-                <div className="form-group">
-                  <label>Camp Title</label>
-                  <input type="text" required value={newCamp.title} onChange={e => setNewCamp({ ...newCamp, title: e.target.value })} placeholder="e.g. Summer Blood Drive" />
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label>Date</label>
-                    <input type="date" required value={newCamp.date} onChange={e => setNewCamp({ ...newCamp, date: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>Start Time</label>
-                    <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({ ...newCamp, start_time: e.target.value })} />
-                  </div>
-                  <div className="form-group">
-                    <label>End Time</label>
-                    <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({ ...newCamp, end_time: e.target.value })} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>Location</label>
-                  <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" />
-                </div>
-                <div className="form-group">
-                  <label>Description</label>
-                  <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({ ...newCamp, description: e.target.value })} />
-                </div>
-                <button type="submit" className="camp-submit-btn">Publish Camp</button>
-              </form>
-            </div>
-          )}
-
-          {view === 'camps' && !selectedCamp && (
-            <div className="dashboard-overview animate-in">
-              {/* HERO STATS */}
-              <div className="hero-stats">
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span className="stat-title">Total Units Collected</span>
-                    <Droplet size={20} color="#dc2626" />
-                  </div>
-                  <div className="stat-value">4,520</div>
-                  <small style={{color: 'var(--main-text-muted)'}}>+12% from last month</small>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span className="stat-title">Active Donors</span>
-                    <Users size={20} color="#0284c7" />
-                  </div>
-                  <div className="stat-value">245</div>
-                  <small style={{color: 'var(--main-text-muted)'}}>Registered this week</small>
-                </div>
-                <div className="stat-card critical">
-                  <div className="stat-header">
-                    <span className="stat-title">Critical Stock</span>
-                    <AlertTriangle size={20} color="#dc2626" />
-                  </div>
-                  <div className="stat-value">O- (20%)</div>
-                  <small style={{color: '#dc2626'}}>Action Required</small>
-                </div>
-                <div className="stat-card">
-                  <div className="stat-header">
-                    <span className="stat-title">Upcoming Camps</span>
-                    <CalendarDays size={20} color="#16a34a" />
-                  </div>
-                  <div className="stat-value">{camps.filter(c => new Date(c.date) >= new Date()).length}</div>
-                  <small style={{color: 'var(--main-text-muted)'}}>Scheduled this month</small>
-                </div>
-              </div>
-
-              {/* MAIN WORKSPACE: F-PATTERN */}
-              <div className="main-workspace">
-                <div className="camps-list">
-                  <h2>Your Camps</h2>
-                  {loading ? (
-                    <p>Loading camps...</p>
-                  ) : camps.length === 0 ? (
-                    <div style={{textAlign: 'center', padding: 40, border: '1px dashed var(--border-color)', borderRadius: 12}}>
-                      <CalendarDays size={48} color="var(--border-color)" style={{marginBottom: 16}} />
-                      <p style={{color: 'var(--main-text-muted)', marginBottom: 16}}>No camps organized yet.</p>
-                      <button className="camp-submit-btn" style={{width: 'auto'}} onClick={() => setView('create')}>Schedule a Camp</button>
-                    </div>
-                  ) : (
-                    <div className="camp-grid">
-                      {camps.map(camp => (
-                        <div key={camp.id} className="camp-card">
-                          <h3>{camp.title}</h3>
-                          <p><Calendar size={14} /> {camp.date} ({camp.start_time} - {camp.end_time})</p>
-                          <p><MapPin size={14} /> {camp.location}</p>
-                          <span className="status-badge active" style={{marginTop: 12}}>{camp.status}</span>
-                          <button onClick={() => handleViewRegistrations(camp)} className="view-regs-btn" style={{marginTop: 16}}>
-                            View Workflow
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <aside className="activity-feed">
-                  <h3><Activity size={18} /> Live Activity Feed</h3>
-                  {notifications.length === 0 ? (
-                    <p style={{color: 'var(--main-text-muted)'}}>No recent activity.</p>
-                  ) : (
-                    notifications.map(n => (
-                      <div key={n.id} className="activity-item">
-                        <strong>{n.event_type}</strong>
-                        <span>{n.message}</span>
-                        <small>{new Date(n.created_at).toLocaleString()}</small>
-                      </div>
-                    ))
-                  )}
-                </aside>
-              </div>
-            </div>
-          )}
-
-          {view === 'history' && (
-            <div className="registrations-view animate-in">
-              <h2>Donated History (Global)</h2>
-              <p style={{color: 'var(--main-text-muted)', marginBottom: 20}}>View all past successful blood donations across your camps.</p>
-              
-              <div className="table-wrapper">
-                <table className="camp-table">
-                  <thead>
-                    <tr>
-                      <th>Donor Name</th>
-                      <th>Blood Group</th>
-                      <th>Camp Location</th>
-                      <th>Date</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {donatedHistory.length === 0 ? (
-                      <tr>
-                        <td colSpan="5" style={{textAlign: 'center', padding: 20}}>
-                          No donation records yet.
-                        </td>
-                      </tr>
-                    ) : (
-                      donatedHistory.map(record => (
-                        <tr key={record.id}>
-                          <td>{record.donor_name}</td>
-                          <td><span className="blood-tag">{record.blood_group}</span></td>
-                          <td>{record.camp_location}</td>
-                          <td>{new Date(record.donated_at).toLocaleDateString()}</td>
-                          <td><span className="status-badge completed">Completed</span></td>
-                        </tr>
-                        ))
-                      )}
-                    </tbody>
-
-                </table>
-              </div>
-            </div>
-          )}
-
-          {view === 'profile' && (
-            <div className="camp-form-card animate-in">
-              <h2>Organizer Profile</h2>
-              <div className="profile-details">
-                <div className="form-group">
-                  <label>Full Name</label>
-                  <input type="text" value={profile?.fullName || profileUser?.username || ''} disabled className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input type="email" value={profileUser?.email || user?.email || ''} disabled className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input type="text" value={profile?.phoneNumber || 'N/A'} disabled className="form-input" />
-                </div>
-                <div className="form-group">
-                  <label>Role</label>
-                  <input type="text" value={profileUser?.role || user?.role || ''} disabled className="form-input" style={{ textTransform: 'capitalize' }} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {selectedCamp && view === 'camps' && (
-            <div className="registrations-view animate-in">
-              <button className="back-btn" onClick={() => setSelectedCamp(null)}>← Back to Camps</button>
-              <h2>Donor Workflow: {selectedCamp.title}</h2>
-
-              {registrations.length === 0 ? (
-                <p>No donor registrations yet.</p>
-              ) : (
-                <table className="camp-table">
-                  <thead>
-                    <tr>
-                      <th>Donor Name</th>
-                      <th>Blood Group</th>
-                      <th>Phone</th>
-                      <th>Status</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {registrations.map(reg => (
-                      <tr key={reg.id}>
-                        <td>{reg.donor_name}</td>
-                        <td><span className="blood-tag">{reg.donor_blood_group || 'N/A'}</span></td>
-                        <td>{reg.donor_phone || 'N/A'}</td>
-                        <td>
-                          <span className={`status-badge ${reg.status}`}>{reg.status}</span>
-                          {reg.rejection_reason ? (
-                            <div className="appt-time" style={{ fontSize: '0.85rem', color: 'var(--main-text-muted)', marginTop: 4 }}>Reason: {reg.rejection_reason}</div>
-                          ) : null}
-                          {reg.collected_at ? (
-                            <div className="appt-time" style={{ fontSize: '0.85rem', color: 'var(--main-text-muted)', marginTop: 4 }}><Clock size={12} /> {new Date(reg.collected_at).toLocaleString()}</div>
-                          ) : null}
-                        </td>
-                        <td>
-                          {reg.status === 'registered' && (
-                            <button onClick={() => runRegistrationAction(reg.id, 'arrive')} className="approve-btn" disabled={processingRegistrationId === reg.id}>
-                              <CheckCircle size={14} /> Mark Arrived
-                            </button>
-                          )}
-                          {reg.status === 'arrived' && (
-                            <button onClick={() => runRegistrationAction(reg.id, 'screening')} className="approve-btn" disabled={processingRegistrationId === reg.id}>
-                              <Activity size={14} /> To Screening
-                            </button>
-                          )}
-                          {reg.status === 'approved' && (
-                            <button onClick={() => runRegistrationAction(reg.id, 'donated')} className="approve-btn success" disabled={processingRegistrationId === reg.id}>
-                              <Droplet size={14} /> Complete Donation
-                            </button>
-                          )}
-                          {(reg.status === 'screening' || reg.status === 'rejected' || reg.status === 'donated') && (
-                            <span style={{ color: 'var(--main-text-muted)', fontSize: '0.85rem' }}>No action available</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-
-              <div style={{ marginTop: 16, color: '#475569', fontSize: '0.92rem' }}>
-                <strong>Summary:</strong>{' '}
-                Registered {groupedRegistrations.registered.length} • Arrived {groupedRegistrations.arrived.length} •
-                Screening {groupedRegistrations.screening.length} • Approved {groupedRegistrations.approved.length} •
-                Rejected {groupedRegistrations.rejected.length} • Donated {groupedRegistrations.donated.length}
-              </div>
-            </div>
-          )}
-        </div>
+  const headerActions = (
+    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+      <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleWorkflowNotifications}>
+        <Bell size={24} style={{ color: 'var(--color-text-main)' }} />
+        {unreadCount > 0 && (
+          <span style={{ position: 'absolute', top: -5, right: -5, background: 'var(--color-critical)', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {unreadCount}
+          </span>
+        )}
       </div>
     </div>
+  );
+
+  const renderContent = () => {
+    if (activeTab === 'create') {
+      return (
+        <div style={{ backgroundColor: 'var(--color-secondary)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+          <h2 style={{ marginBottom: '20px', color: 'var(--color-text-main)' }}>Create New Blood Camp</h2>
+          <form onSubmit={handleCreateCamp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="stat-label">Camp Title</label>
+              <input type="text" required value={newCamp.title} onChange={e => setNewCamp({ ...newCamp, title: e.target.value })} placeholder="e.g. Summer Blood Drive" style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="stat-label">Date</label>
+                <input type="date" required value={newCamp.date} onChange={e => setNewCamp({ ...newCamp, date: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="stat-label">Start Time</label>
+                <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({ ...newCamp, start_time: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label className="stat-label">End Time</label>
+                <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({ ...newCamp, end_time: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="stat-label">Location</label>
+              <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label className="stat-label">Description</label>
+              <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({ ...newCamp, description: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)', resize: 'vertical' }} />
+            </div>
+            <button type="submit" className="dashboard btn btn-primary" style={{ padding: '12px', marginTop: '10px' }}>Publish Camp</button>
+          </form>
+        </div>
+      );
+    }
+
+    if (activeTab === 'history') {
+      return (
+        <DataTable 
+          columns={['Donor Name', 'Blood Group', 'Camp Location', 'Date', 'Status']}
+          data={donatedHistory}
+          emptyMessage="No donation records yet."
+          renderRow={(record) => (
+            <tr key={record.id}>
+              <td>{record.donor_name}</td>
+              <td><StatusBadge status={record.blood_group || 'N/A'} /></td>
+              <td>{record.camp_location}</td>
+              <td>{new Date(record.donated_at).toLocaleDateString()}</td>
+              <td><StatusBadge status="completed" /></td>
+            </tr>
+          )}
+        />
+      );
+    }
+
+    if (activeTab === 'profile') {
+      return (
+        <div style={{ backgroundColor: 'var(--color-secondary)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+          <h2 style={{ marginBottom: '20px', color: 'var(--color-text-main)' }}>Organizer Profile</h2>
+          <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+            <div>
+              <label className="stat-label" style={{display: 'block'}}>Full Name</label>
+              <input type="text" value={profile?.fullName || profileUser?.username || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div>
+              <label className="stat-label" style={{display: 'block'}}>Email Address</label>
+              <input type="email" value={profileUser?.email || user?.email || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div>
+              <label className="stat-label" style={{display: 'block'}}>Phone</label>
+              <input type="text" value={profile?.phoneNumber || 'N/A'} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+            </div>
+            <div>
+              <label className="stat-label" style={{display: 'block'}}>Role</label>
+              <input type="text" value={profileUser?.role || user?.role || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)', textTransform: 'capitalize' }} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Default: 'dashboard' tab
+    if (selectedCamp) {
+      return (
+        <div>
+          <button 
+            className="dashboard btn btn-outline" 
+            onClick={() => setSelectedCamp(null)}
+            style={{ marginBottom: '20px' }}
+          >
+            ← Back to Camps
+          </button>
+          <h2 style={{ marginBottom: '16px', color: 'var(--color-text-main)' }}>Donor Workflow: {selectedCamp.title}</h2>
+          
+          <div style={{ marginBottom: '20px', color: 'var(--color-text-muted)', fontSize: '0.92rem', padding: '12px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
+            <strong>Summary:</strong>{' '}
+            Registered <StatusBadge status={groupedRegistrations.registered.length.toString()} /> • 
+            Arrived <StatusBadge status={groupedRegistrations.arrived.length.toString()} /> • 
+            Screening <StatusBadge status={groupedRegistrations.screening.length.toString()} /> • 
+            Approved <StatusBadge status={groupedRegistrations.approved.length.toString()} /> • 
+            Rejected <StatusBadge status={groupedRegistrations.rejected.length.toString()} /> • 
+            Donated <StatusBadge status={groupedRegistrations.donated.length.toString()} />
+          </div>
+
+          <DataTable 
+            columns={['Donor Name', 'Blood Group', 'Phone', 'Status', 'Actions']}
+            data={registrations}
+            emptyMessage="No donor registrations yet."
+            renderRow={(reg) => (
+              <tr key={reg.id}>
+                <td>{reg.donor_name}</td>
+                <td><StatusBadge status={reg.donor_blood_group || 'N/A'} /></td>
+                <td>{reg.donor_phone || 'N/A'}</td>
+                <td>
+                  <StatusBadge status={reg.status} />
+                  {reg.rejection_reason && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 4 }}>Reason: {reg.rejection_reason}</div>
+                  )}
+                  {reg.collected_at && (
+                    <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: 4 }}><Clock size={12} style={{ display: 'inline' }} /> {new Date(reg.collected_at).toLocaleString()}</div>
+                  )}
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {reg.status === 'registered' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'arrive')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px' }} disabled={processingRegistrationId === reg.id}>
+                        <CheckCircle size={14} /> Mark Arrived
+                      </button>
+                    )}
+                    {reg.status === 'arrived' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'screening')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--color-info)', color: 'white', border: 'none' }} disabled={processingRegistrationId === reg.id}>
+                        <Activity size={14} /> To Screening
+                      </button>
+                    )}
+                    {reg.status === 'approved' && (
+                      <button onClick={() => runRegistrationAction(reg.id, 'donated')} className="dashboard btn btn-primary" style={{ padding: '6px 12px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--color-success)', color: 'white', border: 'none' }} disabled={processingRegistrationId === reg.id}>
+                        <Droplet size={14} /> Complete Donation
+                      </button>
+                    )}
+                    {(reg.status === 'screening' || reg.status === 'rejected' || reg.status === 'donated') && (
+                      <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>No action available</span>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+        </div>
+      );
+    }
+
+    // Dashboard Overview
+    const upcomingCampsCount = camps.filter(c => new Date(c.date) >= new Date()).length;
+    
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div className="stats-grid">
+          <StatCard 
+            title="Total Units Collected" 
+            value="4,520" 
+            Icon={Droplet} 
+            colorClass="text-primary"
+            trend="+12% from last month"
+          />
+          <StatCard 
+            title="Active Donors" 
+            value="245" 
+            Icon={Users} 
+            colorClass="text-info"
+            trend="Registered this week"
+          />
+          <StatCard 
+            title="Critical Stock" 
+            value="O- (20%)" 
+            Icon={AlertTriangle} 
+            colorClass="text-warning"
+            trend="Action Required"
+          />
+          <StatCard 
+            title="Upcoming Camps" 
+            value={upcomingCampsCount} 
+            Icon={CalendarDays} 
+            colorClass="text-success"
+            trend="Scheduled this month"
+          />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '24px' }}>
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ color: 'var(--color-text-main)' }}>Your Camps</h2>
+              <button className="dashboard btn btn-primary" onClick={() => setActiveTab('create')} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Plus size={16} /> Schedule Camp
+              </button>
+            </div>
+            
+            {camps.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)', border: '1px dashed var(--color-border)' }}>
+                <CalendarDays size={48} style={{ color: 'var(--color-border)', marginBottom: '16px' }} />
+                <p style={{ color: 'var(--color-text-muted)', marginBottom: '16px' }}>No camps organized yet.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gap: '16px', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+                {camps.map(camp => (
+                  <div key={camp.id} style={{ backgroundColor: 'var(--color-secondary)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h3 style={{ margin: 0, color: 'var(--color-text-main)' }}>{camp.title}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                      <Calendar size={14} /> {camp.date} ({camp.start_time} - {camp.end_time})
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}>
+                      <MapPin size={14} /> {camp.location}
+                    </div>
+                    <div>
+                      <StatusBadge status={camp.status} />
+                    </div>
+                    <button onClick={() => handleViewRegistrations(camp)} className="dashboard btn btn-outline" style={{ marginTop: 'auto', width: '100%' }}>
+                      View Workflow
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div style={{ backgroundColor: 'var(--color-secondary)', padding: '20px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)', alignSelf: 'start' }}>
+            <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--color-text-main)', marginBottom: '16px', fontSize: '1.1rem' }}>
+              <Activity size={18} /> Live Activity Feed
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '500px', overflowY: 'auto' }}>
+              {notifications.length === 0 ? (
+                <p style={{ color: 'var(--color-text-muted)' }}>No recent activity.</p>
+              ) : (
+                notifications.slice(0, 10).map(n => (
+                  <div key={n.id} style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingBottom: '16px', borderBottom: '1px solid var(--color-border)' }}>
+                    <strong style={{ color: 'var(--color-text-main)', fontSize: '0.9rem' }}>{n.event_type}</strong>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>{n.message}</span>
+                    <small style={{ color: 'var(--color-text-muted)', fontSize: '0.75rem', opacity: 0.7 }}>{new Date(n.created_at).toLocaleString()}</small>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const displayName = profile?.fullName || profileUser?.username || user?.username || "Organizer";
+  const displayRole = profileUser?.role || user?.role || "Organizer";
+
+  return (
+    <DashboardLayout
+      userName={displayName}
+      userRole={displayRole}
+      menuItems={menuItems}
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      headerActions={headerActions}
+      onLogout={logout}
+    >
+      {renderContent()}
+    </DashboardLayout>
   );
 };
 

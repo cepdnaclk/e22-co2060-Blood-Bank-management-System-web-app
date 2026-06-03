@@ -3,10 +3,9 @@ import { useAuth } from '../../context/auth/useAuth';
 import {
     Activity, Search, Ambulance,
     LayoutDashboard, Droplet, ClipboardList, Bell, User,
-    UserCircle, Camera, QrCode, Stethoscope
+    UserCircle, Camera, QrCode, Stethoscope, CheckCircle, Clock
 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import './DoctorDashboard.scss';
 import QRScanner from '../../components/doctor/QRScanner';
 import { getDoctorRequests, createBloodRequest } from '../../api/bloodRequestService';
 import { getBloodStock } from '../../api/inventoryService';
@@ -18,12 +17,17 @@ import {
     markWorkflowNotificationRead,
     rejectCampRegistration,
 } from '../../services/campService';
+import DashboardLayout from '../../components/layout/DashboardLayout';
+import StatCard from '../../components/ui/StatCard';
+import DataTable from '../../components/ui/DataTable';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const DoctorDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const [profileImage, setProfileImage] = useState(null);
     const { user } = useAuth();
     const [profileData, setProfileData] = useState(null);
+    const [userProfileData, setUserProfileData] = useState(null);
 
     const [requests, setRequests] = useState([]);
     const [inventory, setInventory] = useState({});
@@ -31,8 +35,6 @@ const DoctorDashboard = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [queueActionLoading, setQueueActionLoading] = useState(null);
-
-    const [userProfileData, setUserProfileData] = useState(null);
 
     useEffect(() => {
         if (user && user.user_id) {
@@ -52,10 +54,12 @@ const DoctorDashboard = () => {
             getWorkflowNotifications(),
         ]);
 
-        if (reqRes.success) setRequests(reqRes.data);
+        if (reqRes.success) {
+            setRequests(Array.isArray(reqRes.data) ? reqRes.data : (reqRes.data?.results || []));
+        }
         if (invRes.success) setInventory(invRes.data);
-        setScreeningQueue(Array.isArray(queueRes) ? queueRes : []);
-        setNotifications(Array.isArray(notiRes) ? notiRes : []);
+        setScreeningQueue(Array.isArray(queueRes) ? queueRes : (queueRes?.results || []));
+        setNotifications(Array.isArray(notiRes) ? notiRes : (notiRes?.results || []));
         setLoading(false);
     };
 
@@ -112,7 +116,7 @@ const DoctorDashboard = () => {
             title: 'EMERGENCY BLOOD REQUEST',
             html: `
                 <div style="text-align: left;">
-                    <p style="color: #d32f2f; font-weight: bold; margin-bottom: 10px;">This triggers an immediate high-priority alert to the blood bank AND eligible donors.</p>
+                    <p style="color: var(--color-critical); font-weight: bold; margin-bottom: 10px;">This triggers an immediate high-priority alert to the blood bank AND eligible donors.</p>
                     <label>Blood Group Required:</label>
                     <select id="em-blood" class="swal2-select" style="display: flex; width: 100%;">
                         <option>O-</option><option>O+</option><option>A-</option><option>A+</option>
@@ -124,7 +128,7 @@ const DoctorDashboard = () => {
             `,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#d32f2f',
+            confirmButtonColor: 'var(--color-critical)',
             confirmButtonText: 'SUBMIT EMERGENCY REQUEST',
             preConfirm: () => ({
                 blood_group: document.getElementById('em-blood').value,
@@ -201,10 +205,10 @@ const DoctorDashboard = () => {
     const handleOpenNotifications = async () => {
         const html = notifications.length
             ? `<div style="text-align:left;max-height:300px;overflow:auto;">${notifications.map(
-                (n) => `<div style="padding:8px 0;border-bottom:1px solid #eee;">
-                    <strong>${n.event_type}</strong><br/>
-                    <span>${n.message}</span><br/>
-                    <small>${new Date(n.created_at).toLocaleString()}</small>
+                (n) => `<div style="padding:8px 0;border-bottom:1px solid var(--color-border);">
+                    <strong style="color:var(--color-text-main);">${n.event_type}</strong><br/>
+                    <span style="color:var(--color-text-muted);">${n.message}</span><br/>
+                    <small style="color:var(--color-text-muted);">${new Date(n.created_at).toLocaleString()}</small>
                   </div>`
             ).join('')}</div>`
             : '<p>No notifications.</p>';
@@ -219,70 +223,57 @@ const DoctorDashboard = () => {
     const displayDepartment = profileData?.specialization || "Dept";
 
     const renderContent = () => {
+        if (loading && requests.length === 0 && screeningQueue.length === 0) {
+            return <p>Loading data...</p>;
+        }
+
         switch (activeTab) {
             case 'screening-queue':
                 return (
-                    <div className="card fade-in">
-                        <div className="card-header">
-                            <h2>Screening Queue</h2>
-                        </div>
-                        <div className="card-body p-0 data-table-wrapper">
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Camp</th>
-                                        <th>Donor</th>
-                                        <th>Blood Group</th>
-                                        <th>Phone</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {screeningQueue.length === 0 ? (
-                                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: 20 }}>No donors waiting for screening.</td></tr>
-                                    ) : screeningQueue.map((item) => (
-                                        <tr key={item.id}>
-                                            <td>{item.camp_title}</td>
-                                            <td>{item.donor_name}</td>
-                                            <td>{item.donor_blood_group || 'N/A'}</td>
-                                            <td>{item.donor_phone || 'N/A'}</td>
-                                            <td><span className={`badge ${item.status}`}>{item.status}</span></td>
-                                            <td style={{ display: 'flex', gap: 8 }}>
-                                                <button
-                                                    className="btn btn-primary"
-                                                    onClick={() => handleApproveDonor(item.id)}
-                                                    disabled={queueActionLoading === item.id}
-                                                >
-                                                    Approve
-                                                </button>
-                                                <button
-                                                    className="btn"
-                                                    style={{ backgroundColor: '#d32f2f', color: '#fff' }}
-                                                    onClick={() => handleRejectDonor(item.id)}
-                                                    disabled={queueActionLoading === item.id}
-                                                >
-                                                    Reject
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <DataTable 
+                        columns={['Camp', 'Donor', 'Blood Group', 'Phone', 'Status', 'Actions']}
+                        data={screeningQueue}
+                        emptyMessage="No donors waiting for screening."
+                        renderRow={(item) => (
+                            <tr key={item.id}>
+                                <td>{item.camp_title}</td>
+                                <td>{item.donor_name}</td>
+                                <td>{item.donor_blood_group || 'N/A'}</td>
+                                <td>{item.donor_phone || 'N/A'}</td>
+                                <td><StatusBadge status={item.status} /></td>
+                                <td style={{ display: 'flex', gap: '8px' }}>
+                                    <button
+                                        className="dashboard btn btn-primary"
+                                        style={{ padding: '6px 12px', fontSize: '0.875rem' }}
+                                        onClick={() => handleApproveDonor(item.id)}
+                                        disabled={queueActionLoading === item.id}
+                                    >
+                                        Approve
+                                    </button>
+                                    <button
+                                        className="dashboard btn"
+                                        style={{ backgroundColor: 'var(--color-critical)', color: '#fff', padding: '6px 12px', fontSize: '0.875rem' }}
+                                        onClick={() => handleRejectDonor(item.id)}
+                                        disabled={queueActionLoading === item.id}
+                                    >
+                                        Reject
+                                    </button>
+                                </td>
+                            </tr>
+                        )}
+                    />
                 );
             case 'request-blood':
                 return (
-                    <div className="card fade-in">
+                    <div className="card">
                         <div className="card-header">
-                            <h2>New Blood Request</h2>
+                            <h2 className="card-title">New Blood Request</h2>
                         </div>
                         <div className="card-body">
-                            <form onSubmit={handleBloodRequestSubmit} className="form-grid">
+                            <form onSubmit={handleBloodRequestSubmit} style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                                 <div>
-                                    <label>Blood Group Required</label>
-                                    <select name="blood_group" className="input-field" required>
+                                    <label className="stat-label" style={{display: 'block'}}>Blood Group Required</label>
+                                    <select name="blood_group" required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
                                         <option value="A+">A+</option><option value="A-">A-</option>
                                         <option value="B+">B+</option><option value="B-">B-</option>
                                         <option value="O+">O+</option><option value="O-">O-</option>
@@ -290,23 +281,23 @@ const DoctorDashboard = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label>Units Needed</label>
-                                    <input name="units_requested" type="number" min="1" defaultValue="1" className="input-field" required />
+                                    <label className="stat-label" style={{display: 'block'}}>Units Needed</label>
+                                    <input name="units_requested" type="number" min="1" defaultValue="1" required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
                                 </div>
                                 <div>
-                                    <label>Urgency Level</label>
-                                    <select name="urgency" className="input-field">
+                                    <label className="stat-label" style={{display: 'block'}}>Urgency Level</label>
+                                    <select name="urgency" style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
                                         <option>Normal (Within 24h)</option>
                                         <option>Urgent (Within 4h)</option>
                                         <option>Critical (Immediate)</option>
                                     </select>
                                 </div>
-                                <div>
-                                    <label>Reason for Transfusion</label>
-                                    <textarea name="reason" rows="2" className="input-field" placeholder="Surgery, Accident, etc." required />
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <label className="stat-label" style={{display: 'block'}}>Reason for Transfusion</label>
+                                    <textarea name="reason" rows="2" placeholder="Surgery, Accident, etc." required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
                                 </div>
                                 <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="btn btn-primary" style={{ padding: '12px', fontSize: '16px' }}>
+                                    <button type="submit" className="dashboard btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }}>
                                         Submit Request
                                     </button>
                                 </div>
@@ -316,106 +307,97 @@ const DoctorDashboard = () => {
                 );
             case 'requests':
                 return (
-                    <div className="card fade-in">
-                        <div className="card-header">
-                            <h2>My Requests</h2>
-                        </div>
-                        <div className="card-body p-0 data-table-wrapper">
-                            <table className="data-table">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Blood Group</th>
-                                        <th>Units</th>
-                                        <th>Priority</th>
-                                        <th>Status</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {requests.length === 0 ? (
-                                        <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No requests found.</td></tr>
-                                    ) : requests.map(req => (
-                                        <tr key={req.id}>
-                                            <td>{new Date(req.created_at).toLocaleDateString()}</td>
-                                            <td>{req.blood_group}</td>
-                                            <td>{req.units_requested}</td>
-                                            <td>{req.priority_level}</td>
-                                            <td><span className={`badge ${req.status}`}>{req.status}</span></td>
-                                            <td>{req.status === 'REJECTED' ? req.rejection_note : (req.status === 'APPROVED' ? req.approval_note : '-')}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                    <DataTable 
+                        columns={['Date', 'Blood Group', 'Units', 'Priority', 'Status', 'Notes']}
+                        data={requests}
+                        emptyMessage="No requests found."
+                        renderRow={(req) => (
+                            <tr key={req.id}>
+                                <td>{new Date(req.created_at).toLocaleDateString()}</td>
+                                <td><strong>{req.blood_group}</strong></td>
+                                <td>{req.units_requested}</td>
+                                <td><StatusBadge status={req.priority_level} /></td>
+                                <td><StatusBadge status={req.status} /></td>
+                                <td className="text-muted text-sm">{req.status === 'REJECTED' ? req.rejection_note : (req.status === 'APPROVED' ? req.approval_note : '-')}</td>
+                            </tr>
+                        )}
+                    />
                 );
             case 'availability':
                 return (
-                    <div className="card fade-in">
+                    <div className="card">
                         <div className="card-header">
-                            <h2>Blood Availability (Live Inventory)</h2>
+                            <h2 className="card-title">Blood Availability (Live Inventory)</h2>
                         </div>
                         <div className="card-body">
                             {Object.keys(inventory).length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
                                     <p>Inventory data currently unavailable.</p>
-                                    <button className="btn btn-outline" onClick={fetchDashboardData}>Retry Fetch</button>
+                                    <button className="dashboard btn btn-outline" onClick={fetchDashboardData}>Retry Fetch</button>
                                 </div>
                             ) : (
-                                <div className="blood-type-grid">
-                                    {Object.entries(inventory).map(([group, data]) => (
-                                        <div key={group} className={`stock-card status-${data.status}`}>
-                                            <h3>{group}</h3>
-                                            <div className="units">{data.units} Units</div>
-                                            <div className="status">{data.status}</div>
-                                        </div>
-                                    ))}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '20px' }}>
+                                    {Object.entries(inventory).map(([group, data]) => {
+                                        const isLow = data.status === 'LOW' || data.status === 'CRITICAL';
+                                        return (
+                                            <div key={group} style={{ 
+                                                padding: '20px', 
+                                                borderRadius: 'var(--radius-lg)', 
+                                                border: `1px solid ${isLow ? 'var(--color-warning)' : 'var(--color-success)'}`,
+                                                backgroundColor: isLow ? 'var(--color-warning-bg)' : 'var(--color-success-bg)',
+                                                textAlign: 'center'
+                                            }}>
+                                                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', color: isLow ? 'var(--color-warning)' : 'var(--color-success)' }}>{group}</h3>
+                                                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-main)' }}>{data.units} Units</div>
+                                                <div style={{ fontSize: '0.875rem', fontWeight: 500, color: isLow ? 'var(--color-warning)' : 'var(--color-success)', marginTop: '4px' }}>{data.status}</div>
+                                            </div>
+                                        )
+                                    })}
                                 </div>
                             )}
                         </div>
                     </div>
                 );
             case 'scanner':
-                return <QRScanner />;
+                return <div className="card"><div className="card-body"><QRScanner /></div></div>;
             case 'profile':
                 return (
-                    <div className="card fade-in">
+                    <div className="card">
                         <div className="card-header">
-                            <h2>My Profile</h2>
+                            <h2 className="card-title">My Profile</h2>
                         </div>
                         <div className="card-body">
                             <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
                                     <div style={{
-                                        width: '150px', height: '150px', borderRadius: '50%', backgroundColor: '#e0e0e0',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'
+                                        width: '150px', height: '150px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-secondary-light)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--color-border)'
                                     }}>
                                         {profileImage ? (
                                             <img src={profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : <User size={80} color="#999" />}
+                                        ) : <User size={80} color="var(--color-text-muted)" />}
                                     </div>
-                                    <label className="btn btn-outline" style={{ cursor: 'pointer', display: 'flex', gap: '8px' }}>
+                                    <label className="dashboard btn btn-outline" style={{ cursor: 'pointer', display: 'flex', gap: '8px' }}>
                                         <Camera size={16} /> Upload Photo
                                         <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
                                     </label>
                                 </div>
-                                <div style={{ flex: 1, minWidth: '250px' }} className="form-grid">
+                                <div style={{ flex: 1, minWidth: '250px', display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
                                     <div>
-                                        <label>Full Name</label>
-                                        <input type="text" value={displayName} className="input-field" readOnly />
+                                        <label className="stat-label" style={{display: 'block'}}>Full Name</label>
+                                        <input type="text" value={displayName} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
                                     </div>
                                     <div>
-                                        <label>Email</label>
-                                        <input type="email" value={displayEmail} className="input-field" readOnly />
+                                        <label className="stat-label" style={{display: 'block'}}>Email</label>
+                                        <input type="email" value={displayEmail} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
                                     </div>
                                     <div>
-                                        <label>Hospital</label>
-                                        <input type="text" value={displayHospital} className="input-field" readOnly />
+                                        <label className="stat-label" style={{display: 'block'}}>Hospital</label>
+                                        <input type="text" value={displayHospital} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
                                     </div>
                                     <div>
-                                        <label>Department</label>
-                                        <input type="text" value={displayDepartment} className="input-field" readOnly />
+                                        <label className="stat-label" style={{display: 'block'}}>Department</label>
+                                        <input type="text" value={displayDepartment} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
                                     </div>
                                 </div>
                             </div>
@@ -428,23 +410,31 @@ const DoctorDashboard = () => {
                 const completedCount = requests.filter(r => r.status === 'FULFILLED' || r.status === 'COMPLETED').length;
 
                 return (
-                    <div className="dashboard-grid fade-in">
-                        <div className="col-span-4 card" style={{ padding: '20px', textAlign: 'center' }}>
-                            <h3 style={{ color: '#666', fontSize: '14px', textTransform: 'uppercase' }}>Total Requests</h3>
-                            <h1 style={{ fontSize: '36px', color: '#333', margin: '10px 0' }}>{requests.length}</h1>
-                        </div>
-                        <div className="col-span-4 card" style={{ padding: '20px', textAlign: 'center' }}>
-                            <h3 style={{ color: '#666', fontSize: '14px', textTransform: 'uppercase' }}>Pending Requests</h3>
-                            <h1 style={{ fontSize: '36px', color: '#ed6c02', margin: '10px 0' }}>{pendingCount}</h1>
-                        </div>
-                        <div className="col-span-4 card" style={{ padding: '20px', textAlign: 'center' }}>
-                            <h3 style={{ color: '#666', fontSize: '14px', textTransform: 'uppercase' }}>Donors Waiting Screening</h3>
-                            <h1 style={{ fontSize: '36px', color: '#1976d2', margin: '10px 0' }}>{screeningQueue.length}</h1>
-                        </div>
-                        <div className="col-span-12 card" style={{ padding: '20px', textAlign: 'center' }}>
-                            <h3 style={{ color: '#666', fontSize: '14px', textTransform: 'uppercase' }}>Completed Requests</h3>
-                            <h1 style={{ fontSize: '36px', color: '#2e7d32', margin: '10px 0' }}>{completedCount}</h1>
-                        </div>
+                    <div className="stats-grid">
+                        <StatCard 
+                            title="Total Requests" 
+                            value={requests.length} 
+                            Icon={ClipboardList} 
+                            colorClass="text-primary"
+                        />
+                        <StatCard 
+                            title="Pending Requests" 
+                            value={pendingCount} 
+                            Icon={Clock} 
+                            colorClass="text-warning"
+                        />
+                        <StatCard 
+                            title="Donors Waiting Screening" 
+                            value={screeningQueue.length} 
+                            Icon={Stethoscope} 
+                            colorClass="text-info"
+                        />
+                        <StatCard 
+                            title="Completed Requests" 
+                            value={completedCount} 
+                            Icon={CheckCircle} 
+                            colorClass="text-success"
+                        />
                     </div>
                 );
         }
@@ -452,75 +442,51 @@ const DoctorDashboard = () => {
 
     const unreadCount = notifications.filter((n) => !n.is_read).length;
 
-    return (
-        <div className="doctor-dashboard">
-            <div className="doctor-sidebar">
-                <div className="sidebar-header" style={{ padding: '0 20px 20px', borderBottom: '1px solid #eee', marginBottom: '10px' }}>
-                    <h2 style={{ fontSize: '20px', color: '#d32f2f', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Activity size={24} /> HopeDrop
-                    </h2>
-                    <span style={{ fontSize: '12px', color: '#666', textTransform: 'uppercase' }}>Doctor Portal</span>
-                </div>
+    const menuItems = [
+        { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+        { id: 'screening-queue', icon: <Stethoscope size={20} />, label: 'Screening Queue' },
+        { id: 'request-blood', icon: <Droplet size={20} />, label: 'Request Blood' },
+        { id: 'requests', icon: <ClipboardList size={20} />, label: 'My Requests' },
+        { id: 'availability', icon: <Search size={20} />, label: 'Blood Availability' },
+        { id: 'scanner', icon: <QrCode size={20} />, label: 'Donor Scanner' },
+        { id: 'profile', icon: <UserCircle size={20} />, label: 'Profile' },
+    ];
 
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '5px', padding: '0 10px' }}>
-                    {[
-                        { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-                        { id: 'screening-queue', icon: <Stethoscope size={20} />, label: 'Screening Queue' },
-                        { id: 'request-blood', icon: <Droplet size={20} />, label: 'Request Blood' },
-                        { id: 'requests', icon: <ClipboardList size={20} />, label: 'My Requests' },
-                        { id: 'availability', icon: <Search size={20} />, label: 'Blood Availability' },
-                        { id: 'scanner', icon: <QrCode size={20} />, label: 'Donor Scanner' },
-                        { id: 'profile', icon: <UserCircle size={20} />, label: 'Profile' },
-                    ].map(item => (
-                        <button
-                            key={item.id}
-                            onClick={() => setActiveTab(item.id)}
-                            style={{
-                                display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                                border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '15px', fontWeight: '500',
-                                backgroundColor: activeTab === item.id ? '#e3f2fd' : 'transparent',
-                                color: activeTab === item.id ? '#1976d2' : '#555',
-                                textAlign: 'left', transition: 'all 0.2s'
-                            }}
-                        >
-                            {item.icon} <span>{item.label}</span>
-                        </button>
-                    ))}
-                </nav>
+    const headerActions = (
+        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleOpenNotifications}>
+                <Bell size={24} style={{ color: 'var(--color-text-main)' }} />
+                {unreadCount > 0 && (
+                    <span style={{ position: 'absolute', top: -5, right: -5, background: 'var(--color-critical)', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {unreadCount}
+                    </span>
+                )}
             </div>
-
-            <div className="main-content">
-                <div className="header-actions">
-                    <div>
-                        <h1 style={{ margin: '0 0 5px 0', fontSize: '28px', color: '#333' }}>
-                            {displayName}
-                        </h1>
-                        <p style={{ margin: 0, color: '#666', fontSize: '15px' }}>
-                            {displayHospital} • {displayDepartment}
-                        </p>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleOpenNotifications}>
-                            <Bell size={24} color="#555" />
-                            <span style={{ position: 'absolute', top: -5, right: -5, background: '#d32f2f', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unreadCount}</span>
-                        </div>
-                        <button
-                            onClick={handleEmergencyRequest}
-                            className="btn"
-                            style={{
-                                backgroundColor: '#d32f2f', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(211, 47, 47, 0.3)'
-                            }}
-                        >
-                            <Ambulance size={20} />
-                            EMERGENCY REQUEST
-                        </button>
-                    </div>
-                </div>
-
-                {loading ? <p>Loading data...</p> : renderContent()}
-            </div>
+            <button
+                onClick={handleEmergencyRequest}
+                className="dashboard btn"
+                style={{
+                    backgroundColor: 'var(--color-critical)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)'
+                }}
+            >
+                <Ambulance size={20} />
+                <span className="hidden sm:inline">EMERGENCY</span>
+            </button>
         </div>
+    );
+
+    return (
+        <DashboardLayout
+            title={displayName}
+            subtitle={`${displayHospital} • ${displayDepartment}`}
+            brandLabel="Doctor Portal"
+            menuItems={menuItems}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            headerActions={headerActions}
+        >
+            {renderContent()}
+        </DashboardLayout>
     );
 };
 

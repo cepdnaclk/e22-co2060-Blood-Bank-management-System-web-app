@@ -88,6 +88,12 @@ api.interceptors.response.use(
         isRefreshing = false;
         flushRefreshQueue(null);
         localStorage.removeItem('authTokens');
+
+        // Redirect to login page — session has fully expired
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+
         return Promise.reject(refreshError);
       }
     }

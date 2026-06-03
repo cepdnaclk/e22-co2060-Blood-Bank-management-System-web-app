@@ -5,83 +5,39 @@
 /* ─── 1. MAIN NAV BAR (Floating Glassmorphism Pill) ─────── */
 .nav {
     position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100% - 40px);
-    max-width: 1400px;
-    padding: 10px 24px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 12px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
     z-index: 1000;
+    
+    background: var(--color-surface, #ffffff);
+    border-bottom: 1px solid var(--color-border, #E2E8F0);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 
-    /* Glass Effect */
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(24px) saturate(200%);
-    -webkit-backdrop-filter: blur(24px) saturate(200%);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 100px;
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.05),
-        0 2px 8px rgba(0, 0, 0, 0.02);
-
-    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.3s ease;
 }
 
 /* Scrolled State */
 .nav.scrolled {
-    top: 10px;
-    padding: 8px 20px;
-    background: rgba(255, 255, 255, 0.35);
-    border: 1px solid rgba(255, 255, 255, 0.6);
-    box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.08),
-        0 4px 12px rgba(0, 0, 0, 0.04);
+    padding: 8px 40px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-/* Liquid Shine Animation */
-.nav::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: 100px;
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(198, 40, 40, 0.08) 50%,
-        transparent 100%);
-    animation: liquidShine 4s ease-in-out infinite;
-    pointer-events: none;
-}
-
-@keyframes liquidShine {
-    0%   { transform: translateX(-100%); opacity: 0; }
-    50%  { opacity: 1; }
-    100% { transform: translateX(100%); opacity: 0; }
-}
+/* Liquid Shine Animation removed for corporate look */
 
 /* ─── Dark Mode Nav ─── */
 [data-theme="dark"] .nav {
-    background: rgba(13, 17, 23, 0.25);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow:
-        0 8px 32px rgba(0, 0, 0, 0.3),
-        0 2px 8px rgba(0, 0, 0, 0.2);
+    background: var(--color-surface, #1e293b);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 [data-theme="dark"] .nav.scrolled {
-    background: rgba(13, 17, 23, 0.45);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    box-shadow:
-        0 12px 40px rgba(0, 0, 0, 0.4),
-        0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-[data-theme="dark"] .nav::before {
-    background: linear-gradient(90deg,
-        transparent 0%,
-        rgba(198, 40, 40, 0.12) 50%,
-        transparent 100%);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 
@@ -117,11 +73,7 @@
     transition: color 0.3s, text-shadow 0.3s;
 }
 
-/* On home page top section, it might need to be whiter to contrast against the dark hero */
-.nav.on-home:not(.scrolled) .nav-logo-home .logo-text {
-    color: #ffffff;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-}
+/* Removed on-home text color overrides since navbar is now solid */
 
 /* On scrolled state, dark red pops clearly on frosty background */
 .nav.scrolled .logo-text {
@@ -179,11 +131,7 @@
     transition: all 0.3s ease;
 }
 
-/* Home page hero section needs white text initially */
-.nav.on-home:not(.scrolled) .nav-link-home {
-    color: #ffffff;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
-}
+/* Removed on-home white text for links */
 
 .nav.scrolled .nav-link {
     color: var(--color-text-main, #1C2025);
@@ -338,11 +286,7 @@
     transition: all 0.3s;
 }
 
-.nav.on-home:not(.scrolled) .nav-theme-btn-home {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: rgba(255, 255, 255, 0.3);
-    color: #ffffff;
-}
+/* Theme toggle defaults */
 
 .nav.scrolled .theme-toggle-btn {
     color: var(--color-text-main, #1C2025);
@@ -355,9 +299,7 @@
     transform: translateY(-1px);
 }
 
-.nav.on-home:not(.scrolled) .nav-theme-btn-home:hover {
-    background: rgba(255, 255, 255, 0.3);
-}
+
 
 .theme-toggle-track {
     position: relative;
@@ -834,13 +776,7 @@
         z-index: 101;
         transition: all 0.3s;
     }
-    .nav.on-home:not(.scrolled) .nav-menu-toggle {
-        background: rgba(255, 255, 255, 0.15);
-        border-color: rgba(255, 255, 255, 0.3);
-    }
-    .nav.on-home:not(.scrolled) .menu-line {
-        background-color: white;
-    }
+    /* Mobile toggle icon colors */
     .nav-menu-toggle:hover {
         background: rgba(0, 0, 0, 0.1);
     }

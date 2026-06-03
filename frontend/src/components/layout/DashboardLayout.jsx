@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Bell, Moon, Sun } from 'lucide-react';
+import { Menu, X, Bell, Home } from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../../styles/dashboard.css';
@@ -15,21 +15,11 @@ const DashboardLayout = ({
   headerActions
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    if (currentTheme === 'dark') setIsDarkMode(true);
-  }, []);
-
-  const toggleDarkMode = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    document.documentElement.setAttribute('data-theme', newMode ? 'dark' : 'light');
-  };
 
   const handleLogout = () => {
     logout();
@@ -114,11 +104,11 @@ const DashboardLayout = ({
 
           <div className="topbar-actions">
             <button 
-              onClick={toggleDarkMode}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-text-main)' }}
-              title="Toggle Dark Mode"
+              onClick={() => navigate('/')}
+              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', fontWeight: 500 }}
+              title="Back to Landing Page"
             >
-              {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+              <Home size={16} /> <span className="hidden sm:inline">Home</span>
             </button>
             {headerActions}
           </div>

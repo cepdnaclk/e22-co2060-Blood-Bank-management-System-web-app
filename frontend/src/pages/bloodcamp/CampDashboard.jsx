@@ -275,7 +275,27 @@ const CampDashboard = () => {
           >
             ← Back to Camps
           </button>
-          <h2 style={{ marginBottom: '16px', color: 'var(--color-text-main)' }}>Donor Workflow: {selectedCamp.title}</h2>
+          
+          {/* Camp Details Section */}
+          <div style={{ marginBottom: '24px', padding: '20px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
+            <h2 style={{ margin: '0 0 16px 0', color: 'var(--color-text-main)' }}>{selectedCamp.title} - Details</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Date</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{new Date(selectedCamp.date).toLocaleDateString()}</span>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Time</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{selectedCamp.start_time} - {selectedCamp.end_time}</span>
+              </div>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--color-text-muted)', fontWeight: 'bold', marginBottom: '4px' }}>Location</span>
+                <span style={{ color: 'var(--color-text-main)' }}>{selectedCamp.location}</span>
+              </div>
+            </div>
+          </div>
+
+          <h3 style={{ marginBottom: '16px', color: 'var(--color-text-main)' }}>Donor Workflow</h3>
           
           <div style={{ marginBottom: '20px', color: 'var(--color-text-muted)', fontSize: '0.92rem', padding: '12px', backgroundColor: 'var(--color-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)' }}>
             <strong>Summary:</strong>{' '}

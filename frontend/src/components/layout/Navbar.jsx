@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Heart, Activity, User, ShieldAlert, LogIn, LogOut, Moon, Sun, Mail, Calendar, ClipboardList, Stethoscope } from 'lucide-react';
+import { Heart, Activity, User, ShieldAlert, LogIn, LogOut, Mail, Calendar, ClipboardList, Stethoscope } from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
-import { useTheme } from '../../context/theme/ThemeContext';
 import { getRoleConfig, PUBLIC_NAV_ITEMS, ICON_MAP } from '../../config/roleConfig';
 import './Navbar.css';
 import { LOGOS } from '../../config/imageAssets';
@@ -11,7 +10,6 @@ const Navbar = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { isAuthenticated, role, logout } = useAuth();
-    const { theme, toggleTheme } = useTheme();
     const [scrolled, setScrolled] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
 
@@ -140,22 +138,7 @@ const Navbar = () => {
 
                 {/* ACTIONS (right side) */}
                 <div className="nav-actions">
-                    {/* Dark Mode Toggle */}
-                    <button
-                        className="theme-toggle-btn nav-theme-btn-home"
-                        onClick={toggleTheme}
-                        title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-                        aria-label="Toggle dark mode"
-                    >
-                        <span className={`theme-toggle-track ${theme === 'dark' ? 'dark' : ''}`}>
-                            <span className="theme-toggle-thumb">
-                                {theme === 'dark'
-                                    ? <Moon size={12} />
-                                    : <Sun size={12} />
-                                }
-                            </span>
-                        </span>
-                    </button>
+
 
                     {/* Desktop Auth Button (Hidden on Mobile) */}
                     <div className="desktop-actions-only">
@@ -234,10 +217,7 @@ const Navbar = () => {
                 </div>
 
                 <div className="sidebar-footer">
-                    <button className="sidebar-theme-toggle" onClick={toggleTheme}>
-                        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                        <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-                    </button>
+
                     {isAuthenticated ? (
                         <button className="sidebar-auth-btn log-out" onClick={() => { handleLogout(); closeMenu(); }}>
                             <LogOut size={18} /> <span>Logout</span>

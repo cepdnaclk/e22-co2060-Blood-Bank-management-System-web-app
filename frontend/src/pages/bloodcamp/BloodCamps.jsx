@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/auth/useAuth';
 import { 
   Calendar, 
   MapPin, 
@@ -17,6 +18,8 @@ import './BloodCamps.css';
 const BloodCamps = () => {
   const [camps, setCamps] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
@@ -36,9 +39,18 @@ const BloodCamps = () => {
   };
 
   const filteredCamps = camps.filter(camp => 
-    camp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    camp.location.toLowerCase().includes(searchTerm.toLowerCase())
+    (camp.title && camp.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (camp.location && camp.location.toLowerCase().includes(searchTerm.toLowerCase()))
   );
+
+  const handleRegisterClick = (e, campId) => {
+    e.preventDefault();
+    if (isAuthenticated) {
+      navigate('/donor/register', { state: { selectedCampId: campId } });
+    } else {
+      navigate('/login', { state: { returnTo: '/donor/register', selectedCampId: campId } });
+    }
+  };
 
   return (
     <div className="blood-camps-page">
@@ -87,14 +99,14 @@ const BloodCamps = () => {
                       {/* Using a placeholder if no image provided */}
                       <img 
                         src={camp.image_url || "https://images.unsplash.com/photo-1615461066841-6116ecaaba7f?q=80&w=1000&auto=format&fit=crop"} 
-                        alt={camp.name} 
+                        alt={camp.title} 
                       />
                     </div>
                     <div className="camp-content-box">
                       <div className="camp-icon-box">
                         <Calendar size={28} />
                       </div>
-                      <h3 className="camp-title">{camp.name}</h3>
+                      <h3 className="camp-title">{camp.title}</h3>
                       <div className="camp-details">
                         <div className="camp-detail-item">
                           <MapPin size={16} className="detail-icon" />
@@ -116,9 +128,9 @@ const BloodCamps = () => {
                       <p className="camp-description">{camp.description}</p>
                     </div>
                     <div className="camp-action-box">
-                      <Link to="/signup" className="camp-register-btn">
+                      <a href="#" onClick={(e) => handleRegisterClick(e, camp.id)} className="camp-register-btn">
                         Register to Donate <ChevronRight size={18} />
-                      </Link>
+                      </a>
                     </div>
                   </div>
                 </div>

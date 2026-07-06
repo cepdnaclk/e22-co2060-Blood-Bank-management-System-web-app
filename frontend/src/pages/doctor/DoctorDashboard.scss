@@ -265,3 +265,328 @@
     .status { font-size: 12px; font-weight: bold; text-transform: uppercase; }
   }
 }
+
+.doctor-dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.doctor-alert {
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.doctor-loading-state {
+  padding: 20px;
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.doctor-refreshing-state {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  padding: 4px 2px 0;
+}
+
+.doctor-header-actions {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.doctor-notification-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-main);
+}
+
+.doctor-notification-button:hover {
+  background: var(--color-secondary-light);
+}
+
+.doctor-notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-critical);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.doctor-emergency-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-critical);
+  color: #fff;
+  border-radius: var(--radius-md);
+}
+
+.doctor-emergency-button:hover {
+  background: #a61d1d;
+}
+
+.doctor-request-form-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.doctor-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doctor-field-label {
+  display: block;
+}
+
+.doctor-form-control {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text-main);
+}
+
+.doctor-form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.15);
+}
+
+.doctor-form-field--full {
+  grid-column: 1 / -1;
+}
+
+.doctor-textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.doctor-form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.doctor-submit-button {
+  padding: 12px 24px;
+  font-size: 1rem;
+}
+
+.doctor-table-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.doctor-row-action {
+  padding: 6px 12px;
+  font-size: 0.875rem;
+}
+
+.doctor-danger-button {
+  background: var(--color-critical);
+  color: #fff;
+}
+
+.doctor-empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--color-text-muted);
+}
+
+.doctor-inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 20px;
+}
+
+.doctor-inventory-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.doctor-inventory-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.5rem;
+}
+
+.doctor-inventory-card--low {
+  border: 1px solid var(--color-warning);
+  background: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.doctor-inventory-card--safe {
+  border: 1px solid var(--color-success);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.doctor-inventory-units {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-main);
+}
+
+.doctor-inventory-status {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.doctor-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) 1fr;
+  gap: 30px;
+  align-items: start;
+}
+
+.doctor-profile-avatar-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.doctor-profile-avatar {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background-color: var(--color-secondary-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.doctor-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.doctor-upload-label {
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doctor-upload-label input {
+  display: none;
+}
+
+.doctor-upload-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doctor-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: doctor-spin 1s linear infinite;
+}
+
+.doctor-profile-fields {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.doctor-readonly-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-secondary-light);
+  color: var(--color-text-main);
+}
+
+.doctor-notification-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.doctor-notification-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.doctor-notification-item:last-child {
+  border-bottom: none;
+}
+
+.doctor-notification-item strong {
+  color: var(--color-text-main);
+}
+
+.doctor-notification-item span,
+.doctor-notification-item small,
+.doctor-empty-note {
+  color: var(--color-text-muted);
+}
+
+@keyframes doctor-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .doctor-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .doctor-header-actions {
+    gap: 10px;
+  }
+
+  .doctor-emergency-button span {
+    display: none;
+  }
+
+  .doctor-request-form-grid,
+  .doctor-profile-fields {
+    grid-template-columns: 1fr;
+  }
+}

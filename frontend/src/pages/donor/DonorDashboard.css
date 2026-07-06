@@ -283,6 +283,28 @@
   gap: 12px;
 }
 
+.new-edit-mob-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+}
+
+.new-edit-mob-btn:hover {
+  background-color: #dc2626;
+}
+
+.btn-text {
+  display: inline;
+}
+
 /* Images & Avatar Badges */
 .sidebar-pic-wrapper {
   position: relative;
@@ -483,15 +505,6 @@
 
   .btn-text {
     display: none;
-  }
-
-  .edit-mob-btn {
-    padding: 10px !important;
-    width: 42px;
-    height: 42px;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
   }
 
   .profile-header-action {
@@ -1187,13 +1200,12 @@
     display: none;
   }
 
-  .edit-mob-btn {
-    padding: 10px !important;
-    width: 42px;
-    height: 42px;
-    display: flex !important;
-    align-items: center;
+  .new-edit-mob-btn {
+    padding: 10px;
+    border-radius: 50%;
     justify-content: center;
+    width: 40px;
+    height: 40px;
   }
 
   .profile-header-action {

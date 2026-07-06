@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Bell, Home } from 'lucide-react';
+import React, { useState } from 'react';
+import { Menu, X, Home } from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../../styles/dashboard.css';
@@ -16,7 +16,7 @@ const DashboardLayout = ({
 }) => {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -60,18 +60,19 @@ const DashboardLayout = ({
           <div className="brand-title">
             <span className="text-primary">HopeDrop</span>
           </div>
-          <button className="mobile-toggle" onClick={() => setIsMobileOpen(false)}>
+          <button type="button" className="mobile-toggle" onClick={() => setIsMobileOpen(false)} aria-label="Close sidebar">
             <X size={24} />
           </button>
         </div>
         
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border)' }}>
+        <div className="dashboard-brand-box">
           <span className="brand-subtitle">{brandLabel}</span>
         </div>
 
         <nav className="sidebar-nav">
           {menuItems.map((item, idx) => (
             <button
+              type="button"
               key={item.id || idx}
               className={`nav-item ${checkIsActive(item) ? 'active' : ''}`}
               onClick={() => handleNavClick(item)}
@@ -83,7 +84,7 @@ const DashboardLayout = ({
         </nav>
 
         <div className="sidebar-footer">
-          <button className="nav-item" onClick={handleLogout} style={{ color: 'var(--color-critical)' }}>
+          <button type="button" className="nav-item dashboard-logout-button" onClick={handleLogout}>
             <span>Logout</span>
           </button>
         </div>
@@ -92,23 +93,24 @@ const DashboardLayout = ({
       {/* Main Content */}
       <main className="dashboard-main">
         <header className="dashboard-topbar">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button className="mobile-toggle" onClick={() => setIsMobileOpen(true)}>
+          <div className="dashboard-topbar-left">
+            <button type="button" className="mobile-toggle" onClick={() => setIsMobileOpen(true)} aria-label="Open sidebar">
               <Menu size={24} />
             </button>
             <div>
-              <h1 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 600 }}>{title}</h1>
-              {subtitle && <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', margin: 0 }}>{subtitle}</p>}
+              <h1 className="dashboard-page-title">{title}</h1>
+              {subtitle && <p className="dashboard-page-subtitle">{subtitle}</p>}
             </div>
           </div>
 
           <div className="topbar-actions">
             <button 
+              type="button"
               onClick={() => navigate('/')}
-              style={{ background: 'none', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-md)', padding: '6px 12px', cursor: 'pointer', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.875rem', fontWeight: 500 }}
+              className="dashboard-home-button"
               title="Back to Landing Page"
             >
-              <Home size={16} /> <span className="hidden sm:inline">Home</span>
+              <Home size={16} /> <span>Home</span>
             </button>
             {headerActions}
           </div>

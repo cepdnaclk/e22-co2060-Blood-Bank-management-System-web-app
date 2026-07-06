@@ -1,120 +1,317 @@
-import React, { useEffect, useState } from 'react';
-import { useAuth } from '../../context/auth/useAuth';
+import React, { useCallback, useEffect, useState } from "react";
+import { useAuth } from "../../context/auth/useAuth";
 import {
-    Activity, Search, Ambulance,
-    LayoutDashboard, Droplet, ClipboardList, Bell, User,
-    UserCircle, Camera, QrCode, Stethoscope, CheckCircle, Clock
-} from 'lucide-react';
-import Swal from 'sweetalert2';
-import QRScanner from '../../components/doctor/QRScanner';
-import { getDoctorRequests, createBloodRequest } from '../../api/bloodRequestService';
-import { getBloodStock } from '../../api/inventoryService';
-import api from '../../api/api';
+  Search,
+  Ambulance,
+  LayoutDashboard,
+  Droplet,
+  ClipboardList,
+  Bell,
+  User,
+  UserCircle,
+  Camera,
+  QrCode,
+  Stethoscope,
+  CheckCircle,
+  Clock,
+} from "lucide-react";
+import Swal from "sweetalert2";
+import QRScanner from "../../components/doctor/QRScanner";
 import {
-    approveCampRegistration,
-    getScreeningQueue,
-    getWorkflowNotifications,
-    markWorkflowNotificationRead,
-    rejectCampRegistration,
-} from '../../services/campService';
-import DashboardLayout from '../../components/layout/DashboardLayout';
-import StatCard from '../../components/ui/StatCard';
-import DataTable from '../../components/ui/DataTable';
-import StatusBadge from '../../components/ui/StatusBadge';
+  getDoctorRequests,
+  createBloodRequest,
+} from "../../api/bloodRequestService";
+import { getBloodStock } from "../../api/inventoryService";
+import api from "../../api/api";
+import {
+  approveCampRegistration,
+  getScreeningQueue,
+  getWorkflowNotifications,
+  markWorkflowNotificationRead,
+  rejectCampRegistration,
+} from "../../services/campService";
+import DashboardLayout from "../../components/layout/DashboardLayout";
+import StatCard from "../../components/ui/StatCard";
+import DataTable from "../../components/ui/DataTable";
+import StatusBadge from "../../components/ui/StatusBadge";
+import "./DoctorDashboard.scss";
 
+const DOCTOR_TABS = {
+  DASHBOARD: "dashboard",
+  SCREENING_QUEUE: "screening-queue",
+  REQUEST_BLOOD: "request-blood",
+  REQUESTS: "requests",
+  AVAILABILITY: "availability",
+  SCANNER: "scanner",
+  PROFILE: "profile",
+};
+
+const REQUEST_URGENCY_OPTIONS = [
+  "Normal (Within 24h)",
+  "Urgent (Within 4h)",
+  "Critical (Immediate)",
+];
+
+const normalizeList = (value) => {
+  if (Array.isArray(value)) {
+    return value;
+  }
+  return value?.results || [];
+};
+
+const escapeHtml = (value) =>
+  String(value ?? "").replace(
+    /[&<>"']/g,
+    (char) =>
+      ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      })[char],
+  );
+
+const buildNotificationsHtml = (notifications) => {
+  if (!notifications.length) {
+    return '<p class="doctor-empty-note">No notifications.</p>';
+  }
+
+  return `
+        <div class="doctor-notification-list">
+            ${notifications
+              .map(
+                (notification) => `
+                <article class="doctor-notification-item">
+                    <strong>${escapeHtml(notification.event_type)}</strong>
+                    <span>${escapeHtml(notification.message)}</span>
+                    <small>${escapeHtml(new Date(notification.created_at).toLocaleString())}</small>
+                </article>
+            `,
+              )
+              .join("")}
+        </div>
+    `;
+};
+
+const requestPriorityFromUrgency = (urgency) => {
+  if (urgency === "Critical (Immediate)") {
+    return "CRITICAL";
+  }
+  if (urgency === "Urgent (Within 4h)") {
+    return "HIGH";
+  }
+  return "NORMAL";
+};
+
+const isCompletedRequest = (status) => {
+  const normalized = String(status ?? "").toUpperCase();
+  return normalized === "FULFILLED" || normalized === "COMPLETED";
+};
+
+const MENU_ITEMS = [
+  {
+    id: DOCTOR_TABS.DASHBOARD,
+    icon: <LayoutDashboard size={20} />,
+    label: "Dashboard",
+  },
+  {
+    id: DOCTOR_TABS.SCREENING_QUEUE,
+    icon: <Stethoscope size={20} />,
+    label: "Screening Queue",
+  },
+  {
+    id: DOCTOR_TABS.REQUEST_BLOOD,
+    icon: <Droplet size={20} />,
+    label: "Request Blood",
+  },
+  {
+    id: DOCTOR_TABS.REQUESTS,
+    icon: <ClipboardList size={20} />,
+    label: "My Requests",
+  },
+  {
+    id: DOCTOR_TABS.AVAILABILITY,
+    icon: <Search size={20} />,
+    label: "Blood Availability",
+  },
+  {
+    id: DOCTOR_TABS.SCANNER,
+    icon: <QrCode size={20} />,
+    label: "Donor Scanner",
+  },
+  { id: DOCTOR_TABS.PROFILE, icon: <UserCircle size={20} />, label: "Profile" },
+];
 const DoctorDashboard = () => {
-    const [activeTab, setActiveTab] = useState('dashboard');
-    const [profileImage, setProfileImage] = useState(null);
-    const { user } = useAuth();
-    const [profileData, setProfileData] = useState(null);
-    const [userProfileData, setUserProfileData] = useState(null);
+  const [activeTab, setActiveTab] = useState(DOCTOR_TABS.DASHBOARD);
+  const [profileImage, setProfileImage] = useState(null);
+  const { user } = useAuth();
+  const [profileData, setProfileData] = useState(null);
+  const [userProfileData, setUserProfileData] = useState(null);
 
-    const [requests, setRequests] = useState([]);
-    const [inventory, setInventory] = useState({});
-    const [screeningQueue, setScreeningQueue] = useState([]);
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [queueActionLoading, setQueueActionLoading] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [inventory, setInventory] = useState({});
+  const [screeningQueue, setScreeningQueue] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dashboardError, setDashboardError] = useState("");
+  const [profileLoading, setProfileLoading] = useState(true);
+  const [profileError, setProfileError] = useState("");
+  const [queueActionLoading, setQueueActionLoading] = useState(null);
+  const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [profileUploading, setProfileUploading] = useState(false);
 
-    useEffect(() => {
-        if (user && user.user_id) {
-            fetchDoctorProfile();
-            fetchDashboardData();
-            const timer = setInterval(fetchDashboardData, 8000);
-            return () => clearInterval(timer);
+  const fetchDashboardData = useCallback(async (showLoading = false) => {
+    if (showLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
+    setDashboardError("");
+
+    try {
+      const results = await Promise.allSettled([
+        getDoctorRequests(),
+        getBloodStock(),
+        getScreeningQueue(),
+        getWorkflowNotifications(),
+      ]);
+
+      const [reqRes, invRes, queueRes, notiRes] = results;
+
+      if (reqRes.status === "fulfilled" && reqRes.value?.success) {
+        setRequests(normalizeList(reqRes.value.data));
+      }
+
+      if (invRes.status === "fulfilled" && invRes.value?.success) {
+        setInventory(invRes.value.data);
+      }
+
+      if (queueRes.status === "fulfilled") {
+        setScreeningQueue(normalizeList(queueRes.value));
+      }
+
+      if (notiRes.status === "fulfilled") {
+        setNotifications(normalizeList(notiRes.value));
+      }
+
+      const failedCall = results.find((result) => {
+        if (result.status === "rejected") {
+          return true;
         }
-    }, [user]);
 
-    const fetchDashboardData = async () => {
-        setLoading(true);
-        const [reqRes, invRes, queueRes, notiRes] = await Promise.all([
-            getDoctorRequests(),
-            getBloodStock(),
-            getScreeningQueue(),
-            getWorkflowNotifications(),
-        ]);
+        return result.value && result.value.success === false;
+      });
 
-        if (reqRes.success) {
-            setRequests(Array.isArray(reqRes.data) ? reqRes.data : (reqRes.data?.results || []));
-        }
-        if (invRes.success) setInventory(invRes.data);
-        setScreeningQueue(Array.isArray(queueRes) ? queueRes : (queueRes?.results || []));
-        setNotifications(Array.isArray(notiRes) ? notiRes : (notiRes?.results || []));
+      if (failedCall) {
+        setDashboardError(
+          "Some dashboard data could not be refreshed. Showing the latest available data.",
+        );
+      }
+    } catch {
+      setDashboardError("Unable to refresh dashboard data.");
+    } finally {
+      if (showLoading) {
         setLoading(false);
-    };
+      } else {
+        setRefreshing(false);
+      }
+    }
+  }, []);
 
-    const fetchDoctorProfile = async () => {
-        try {
-            const [doctorRes, profileRes] = await Promise.all([
-                api.get(`adminDashboard/doctor/profile/${user.user_id}/`),
-                api.get('auth/profile/'),
-            ]);
-            setProfileData(doctorRes.data);
-            setUserProfileData(profileRes.data);
-            if (doctorRes.data.profile_pic) {
-                setProfileImage(doctorRes.data.profile_pic);
-            }
-        } catch (error) {
-            try {
-                const profileRes = await api.get('auth/profile/');
-                setUserProfileData(profileRes.data);
-                setProfileData(null);
-            } catch {
-                setUserProfileData(null);
-                setProfileData(null);
-            }
+  const fetchDoctorProfile = useCallback(async () => {
+    if (!user?.user_id) {
+      setProfileLoading(false);
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileError("");
+
+    try {
+      const [doctorResult, profileResult] = await Promise.allSettled([
+        api.get(`adminDashboard/doctor/profile/${user.user_id}/`),
+        api.get("auth/profile/"),
+      ]);
+
+      if (doctorResult.status === "fulfilled") {
+        const doctorData = doctorResult.value.data;
+        setProfileData(doctorData);
+        if (doctorData?.profile_pic) {
+          setProfileImage(doctorData.profile_pic);
         }
-    };
+      } else {
+        setProfileData(null);
+      }
 
-    const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+      if (profileResult.status === "fulfilled") {
+        setUserProfileData(profileResult.value.data);
+      } else {
+        setUserProfileData(null);
+      }
 
-        const formData = new FormData();
-        formData.append('profile_pic', file);
+      if (
+        doctorResult.status === "rejected" &&
+        profileResult.status === "rejected"
+      ) {
+        setProfileError("Unable to load doctor profile details.");
+      }
+    } catch {
+      setProfileError("Unable to load doctor profile details.");
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [user?.user_id]);
 
-        try {
-            await api.patch('medicalOfficers/doctor/profile-pic/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
+  useEffect(() => {
+    if (!user?.user_id) {
+      return undefined;
+    }
 
-            setProfileImage(URL.createObjectURL(file));
-            Swal.fire({
-                title: 'Photo Uploaded!',
-                text: 'Your profile photo has been updated.',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        } catch (err) {
-            Swal.fire('Upload Failed', 'Could not save the image. Try again.', 'error');
-        }
-    };
+    fetchDoctorProfile();
+    fetchDashboardData(true);
+    const timer = setInterval(() => fetchDashboardData(false), 8000);
 
-    const handleEmergencyRequest = () => {
-        Swal.fire({
-            title: 'EMERGENCY BLOOD REQUEST',
-            html: `
+    return () => clearInterval(timer);
+  }, [user?.user_id, fetchDoctorProfile, fetchDashboardData]);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("profile_pic", file);
+
+    try {
+      setProfileUploading(true);
+      await api.patch("medicalOfficers/doctor/profile-pic/", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setProfileImage(URL.createObjectURL(file));
+      Swal.fire({
+        title: "Photo Uploaded!",
+        text: "Your profile photo has been updated.",
+        icon: "success",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch {
+      Swal.fire(
+        "Upload Failed",
+        "Could not save the image. Try again.",
+        "error",
+      );
+    } finally {
+      setProfileUploading(false);
+    }
+  };
+
+  const handleEmergencyRequest = async () => {
+    const result = await Swal.fire({
+      title: "EMERGENCY BLOOD REQUEST",
+      html: `
                 <div style="text-align: left;">
                     <p style="color: var(--color-critical); font-weight: bold; margin-bottom: 10px;">This triggers an immediate high-priority alert to the blood bank AND eligible donors.</p>
                     <label>Blood Group Required:</label>
@@ -126,368 +323,543 @@ const DoctorDashboard = () => {
                     <input id="em-units" type="number" value="2" class="swal2-input" style="display: flex; width: 100%;" />
                 </div>
             `,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: 'var(--color-critical)',
-            confirmButtonText: 'SUBMIT EMERGENCY REQUEST',
-            preConfirm: () => ({
-                blood_group: document.getElementById('em-blood').value,
-                units_requested: document.getElementById('em-units').value,
-                priority_level: 'CRITICAL'
-            })
-        }).then(async (result) => {
-            if (!result.isConfirmed) return;
-            const res = await createBloodRequest(result.value);
-            if (res.success) {
-                Swal.fire('Dispatched!', 'Emergency request sent.', 'success');
-                fetchDashboardData();
-            } else {
-                Swal.fire('Error', 'Failed to dispatch emergency request.', 'error');
-            }
-        });
-    };
-
-    const handleBloodRequestSubmit = async (e) => {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.priority_level = data.urgency === 'Critical (Immediate)' ? 'CRITICAL' : (data.urgency === 'Urgent (Within 4h)' ? 'HIGH' : 'NORMAL');
-
-        const res = await createBloodRequest(data);
-        if (res.success) {
-            Swal.fire('Success', 'Blood Request Submitted successfully', 'success');
-            fetchDashboardData();
-            setActiveTab('requests');
-        } else {
-            Swal.fire('Error', res.error?.detail || 'Submission failed', 'error');
-        }
-    };
-
-    const handleApproveDonor = async (registrationId) => {
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "var(--color-critical)",
+      confirmButtonText: "SUBMIT EMERGENCY REQUEST",
+      showLoaderOnConfirm: true,
+      preConfirm: async () => {
         try {
-            setQueueActionLoading(registrationId);
-            await approveCampRegistration(registrationId);
-            await fetchDashboardData();
-            Swal.fire('Approved', 'Donor approved for collection.', 'success');
+          const payload = {
+            blood_group: document.getElementById("em-blood").value,
+            units_requested: document.getElementById("em-units").value,
+            priority_level: "CRITICAL",
+          };
+          const response = await createBloodRequest(payload);
+          if (!response.success) {
+            Swal.showValidationMessage(
+              response.error?.detail || "Failed to dispatch emergency request.",
+            );
+            return null;
+          }
+          return response;
         } catch (error) {
-            Swal.fire('Error', error.response?.data?.detail || 'Could not approve donor.', 'error');
-        } finally {
-            setQueueActionLoading(null);
+          Swal.showValidationMessage(
+            error.response?.data?.detail ||
+              "Failed to dispatch emergency request.",
+          );
+          return null;
         }
-    };
+      },
+    });
 
-    const handleRejectDonor = async (registrationId) => {
-        const result = await Swal.fire({
-            title: 'Reject Donor',
-            input: 'text',
-            inputLabel: 'Reason for rejection',
-            inputPlaceholder: 'e.g. Hb below threshold',
-            showCancelButton: true,
-            preConfirm: (reason) => {
-                if (!reason) Swal.showValidationMessage('Rejection reason is required');
-                return reason;
-            },
-        });
-        if (!result.isConfirmed) return;
+    if (!result.isConfirmed || !result.value) {
+      return;
+    }
 
-        try {
-            setQueueActionLoading(registrationId);
-            await rejectCampRegistration(registrationId, result.value);
-            await fetchDashboardData();
-            Swal.fire('Rejected', 'Donor rejected with reason.', 'info');
-        } catch (error) {
-            Swal.fire('Error', error.response?.data?.detail || 'Could not reject donor.', 'error');
-        } finally {
-            setQueueActionLoading(null);
-        }
-    };
+    Swal.fire("Dispatched!", "Emergency request sent.", "success");
+    fetchDashboardData(false);
+  };
 
-    const handleOpenNotifications = async () => {
-        const html = notifications.length
-            ? `<div style="text-align:left;max-height:300px;overflow:auto;">${notifications.map(
-                (n) => `<div style="padding:8px 0;border-bottom:1px solid var(--color-border);">
-                    <strong style="color:var(--color-text-main);">${n.event_type}</strong><br/>
-                    <span style="color:var(--color-text-muted);">${n.message}</span><br/>
-                    <small style="color:var(--color-text-muted);">${new Date(n.created_at).toLocaleString()}</small>
-                  </div>`
-            ).join('')}</div>`
-            : '<p>No notifications.</p>';
-        await Swal.fire({ title: 'Notifications', html, width: 700 });
-        await Promise.all(notifications.filter((n) => !n.is_read).map((n) => markWorkflowNotificationRead(n.id)));
-        await fetchDashboardData();
-    };
+  const handleBloodRequestSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const data = Object.fromEntries(formData.entries());
 
-    const displayName = profileData?.full_name || userProfileData?.profile?.fullName || profileData?.user?.first_name || user?.username || "Doctor Dashboard";
-    const displayEmail = profileData?.user?.email || userProfileData?.user?.email || "";
-    const displayHospital = profileData?.hospital || userProfileData?.profile?.hospital || "Hospital";
-    const displayDepartment = profileData?.specialization || "Dept";
+    try {
+      setRequestSubmitting(true);
+      data.priority_level = requestPriorityFromUrgency(data.urgency);
 
-    const renderContent = () => {
-        if (loading && requests.length === 0 && screeningQueue.length === 0) {
-            return <p>Loading data...</p>;
-        }
+      const res = await createBloodRequest(data);
+      if (res.success) {
+        Swal.fire(
+          "Success",
+          "Blood request submitted successfully.",
+          "success",
+        );
+        fetchDashboardData(false);
+        setActiveTab(DOCTOR_TABS.REQUESTS);
+      } else {
+        Swal.fire("Error", res.error?.detail || "Submission failed", "error");
+      }
+    } finally {
+      setRequestSubmitting(false);
+    }
+  };
 
-        switch (activeTab) {
-            case 'screening-queue':
-                return (
-                    <DataTable 
-                        columns={['Camp', 'Donor', 'Blood Group', 'Phone', 'Status', 'Actions']}
-                        data={screeningQueue}
-                        emptyMessage="No donors waiting for screening."
-                        renderRow={(item) => (
-                            <tr key={item.id}>
-                                <td>{item.camp_title}</td>
-                                <td>{item.donor_name}</td>
-                                <td>{item.donor_blood_group || 'N/A'}</td>
-                                <td>{item.donor_phone || 'N/A'}</td>
-                                <td><StatusBadge status={item.status} /></td>
-                                <td style={{ display: 'flex', gap: '8px' }}>
-                                    <button
-                                        className="dashboard btn btn-primary"
-                                        style={{ padding: '6px 12px', fontSize: '0.875rem' }}
-                                        onClick={() => handleApproveDonor(item.id)}
-                                        disabled={queueActionLoading === item.id}
-                                    >
-                                        Approve
-                                    </button>
-                                    <button
-                                        className="dashboard btn"
-                                        style={{ backgroundColor: 'var(--color-critical)', color: '#fff', padding: '6px 12px', fontSize: '0.875rem' }}
-                                        onClick={() => handleRejectDonor(item.id)}
-                                        disabled={queueActionLoading === item.id}
-                                    >
-                                        Reject
-                                    </button>
-                                </td>
-                            </tr>
-                        )}
-                    />
-                );
-            case 'request-blood':
-                return (
-                    <div className="card">
-                        <div className="card-header">
-                            <h2 className="card-title">New Blood Request</h2>
-                        </div>
-                        <div className="card-body">
-                            <form onSubmit={handleBloodRequestSubmit} style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                                <div>
-                                    <label className="stat-label" style={{display: 'block'}}>Blood Group Required</label>
-                                    <select name="blood_group" required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                                        <option value="A+">A+</option><option value="A-">A-</option>
-                                        <option value="B+">B+</option><option value="B-">B-</option>
-                                        <option value="O+">O+</option><option value="O-">O-</option>
-                                        <option value="AB+">AB+</option><option value="AB-">AB-</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="stat-label" style={{display: 'block'}}>Units Needed</label>
-                                    <input name="units_requested" type="number" min="1" defaultValue="1" required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
-                                </div>
-                                <div>
-                                    <label className="stat-label" style={{display: 'block'}}>Urgency Level</label>
-                                    <select name="urgency" style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
-                                        <option>Normal (Within 24h)</option>
-                                        <option>Urgent (Within 4h)</option>
-                                        <option>Critical (Immediate)</option>
-                                    </select>
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <label className="stat-label" style={{display: 'block'}}>Reason for Transfusion</label>
-                                    <textarea name="reason" rows="2" placeholder="Surgery, Accident, etc." required style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }} />
-                                </div>
-                                <div style={{ gridColumn: '1 / -1' }}>
-                                    <button type="submit" className="dashboard btn btn-primary" style={{ padding: '12px 24px', fontSize: '1rem' }}>
-                                        Submit Request
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                );
-            case 'requests':
-                return (
-                    <DataTable 
-                        columns={['Date', 'Blood Group', 'Units', 'Priority', 'Status', 'Notes']}
-                        data={requests}
-                        emptyMessage="No requests found."
-                        renderRow={(req) => (
-                            <tr key={req.id}>
-                                <td>{new Date(req.created_at).toLocaleDateString()}</td>
-                                <td><strong>{req.blood_group}</strong></td>
-                                <td>{req.units_requested}</td>
-                                <td><StatusBadge status={req.priority_level} /></td>
-                                <td><StatusBadge status={req.status} /></td>
-                                <td className="text-muted text-sm">{req.status === 'REJECTED' ? req.rejection_note : (req.status === 'APPROVED' ? req.approval_note : '-')}</td>
-                            </tr>
-                        )}
-                    />
-                );
-            case 'availability':
-                return (
-                    <div className="card">
-                        <div className="card-header">
-                            <h2 className="card-title">Blood Availability (Live Inventory)</h2>
-                        </div>
-                        <div className="card-body">
-                            {Object.keys(inventory).length === 0 ? (
-                                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--color-text-muted)' }}>
-                                    <p>Inventory data currently unavailable.</p>
-                                    <button className="dashboard btn btn-outline" onClick={fetchDashboardData}>Retry Fetch</button>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '20px' }}>
-                                    {Object.entries(inventory).map(([group, data]) => {
-                                        const isLow = data.status === 'LOW' || data.status === 'CRITICAL';
-                                        return (
-                                            <div key={group} style={{ 
-                                                padding: '20px', 
-                                                borderRadius: 'var(--radius-lg)', 
-                                                border: `1px solid ${isLow ? 'var(--color-warning)' : 'var(--color-success)'}`,
-                                                backgroundColor: isLow ? 'var(--color-warning-bg)' : 'var(--color-success-bg)',
-                                                textAlign: 'center'
-                                            }}>
-                                                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.5rem', color: isLow ? 'var(--color-warning)' : 'var(--color-success)' }}>{group}</h3>
-                                                <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--color-text-main)' }}>{data.units} Units</div>
-                                                <div style={{ fontSize: '0.875rem', fontWeight: 500, color: isLow ? 'var(--color-warning)' : 'var(--color-success)', marginTop: '4px' }}>{data.status}</div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                );
-            case 'scanner':
-                return <div className="card"><div className="card-body"><QRScanner /></div></div>;
-            case 'profile':
-                return (
-                    <div className="card">
-                        <div className="card-header">
-                            <h2 className="card-title">My Profile</h2>
-                        </div>
-                        <div className="card-body">
-                            <div style={{ display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-                                    <div style={{
-                                        width: '150px', height: '150px', borderRadius: 'var(--radius-full)', backgroundColor: 'var(--color-secondary-light)',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', border: '1px solid var(--color-border)'
-                                    }}>
-                                        {profileImage ? (
-                                            <img src={profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : <User size={80} color="var(--color-text-muted)" />}
-                                    </div>
-                                    <label className="dashboard btn btn-outline" style={{ cursor: 'pointer', display: 'flex', gap: '8px' }}>
-                                        <Camera size={16} /> Upload Photo
-                                        <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} />
-                                    </label>
-                                </div>
-                                <div style={{ flex: 1, minWidth: '250px', display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                                    <div>
-                                        <label className="stat-label" style={{display: 'block'}}>Full Name</label>
-                                        <input type="text" value={displayName} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
-                                    </div>
-                                    <div>
-                                        <label className="stat-label" style={{display: 'block'}}>Email</label>
-                                        <input type="email" value={displayEmail} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
-                                    </div>
-                                    <div>
-                                        <label className="stat-label" style={{display: 'block'}}>Hospital</label>
-                                        <input type="text" value={displayHospital} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
-                                    </div>
-                                    <div>
-                                        <label className="stat-label" style={{display: 'block'}}>Department</label>
-                                        <input type="text" value={displayDepartment} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            case 'dashboard':
-            default:
-                const pendingCount = requests.filter(r => r.status === 'PENDING').length;
-                const completedCount = requests.filter(r => r.status === 'FULFILLED' || r.status === 'COMPLETED').length;
+  const handleApproveDonor = async (registrationId) => {
+    try {
+      setQueueActionLoading(registrationId);
+      await approveCampRegistration(registrationId);
+      await fetchDashboardData(false);
+      Swal.fire("Approved", "Donor approved for collection.", "success");
+    } catch (error) {
+      Swal.fire(
+        "Error",
+        error.response?.data?.detail || "Could not approve donor.",
+        "error",
+      );
+    } finally {
+      setQueueActionLoading(null);
+    }
+  };
 
-                return (
-                    <div className="stats-grid">
-                        <StatCard 
-                            title="Total Requests" 
-                            value={requests.length} 
-                            Icon={ClipboardList} 
-                            colorClass="text-primary"
-                        />
-                        <StatCard 
-                            title="Pending Requests" 
-                            value={pendingCount} 
-                            Icon={Clock} 
-                            colorClass="text-warning"
-                        />
-                        <StatCard 
-                            title="Donors Waiting Screening" 
-                            value={screeningQueue.length} 
-                            Icon={Stethoscope} 
-                            colorClass="text-info"
-                        />
-                        <StatCard 
-                            title="Completed Requests" 
-                            value={completedCount} 
-                            Icon={CheckCircle} 
-                            colorClass="text-success"
-                        />
-                    </div>
-                );
-        }
-    };
+  const handleRejectDonor = async (registrationId) => {
+    const result = await Swal.fire({
+      title: "Reject Donor",
+      input: "text",
+      inputLabel: "Reason for rejection",
+      inputPlaceholder: "e.g. Hb below threshold",
+      showCancelButton: true,
+      preConfirm: (reason) => {
+        if (!reason) Swal.showValidationMessage("Rejection reason is required");
+        return reason;
+      },
+    });
+    if (!result.isConfirmed) return;
 
-    const unreadCount = notifications.filter((n) => !n.is_read).length;
+    try {
+      setQueueActionLoading(registrationId);
+      await rejectCampRegistration(registrationId, result.value);
+      await fetchDashboardData(false);
+      Swal.fire("Rejected", "Donor rejected with reason.", "info");
+    } catch (error) {
+      Swal.fire(
+        "Error",
+        error.response?.data?.detail || "Could not reject donor.",
+        "error",
+      );
+    } finally {
+      setQueueActionLoading(null);
+    }
+  };
 
-    const menuItems = [
-        { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
-        { id: 'screening-queue', icon: <Stethoscope size={20} />, label: 'Screening Queue' },
-        { id: 'request-blood', icon: <Droplet size={20} />, label: 'Request Blood' },
-        { id: 'requests', icon: <ClipboardList size={20} />, label: 'My Requests' },
-        { id: 'availability', icon: <Search size={20} />, label: 'Blood Availability' },
-        { id: 'scanner', icon: <QrCode size={20} />, label: 'Donor Scanner' },
-        { id: 'profile', icon: <UserCircle size={20} />, label: 'Profile' },
-    ];
+  const handleOpenNotifications = async () => {
+    const html = buildNotificationsHtml(notifications);
+    await Swal.fire({ title: "Notifications", html, width: 700 });
+    await Promise.allSettled(
+      notifications
+        .filter((n) => !n.is_read)
+        .map((n) => markWorkflowNotificationRead(n.id)),
+    );
+    await fetchDashboardData(false);
+  };
 
-    const headerActions = (
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleOpenNotifications}>
-                <Bell size={24} style={{ color: 'var(--color-text-main)' }} />
-                {unreadCount > 0 && (
-                    <span style={{ position: 'absolute', top: -5, right: -5, background: 'var(--color-critical)', color: '#fff', borderRadius: '50%', width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {unreadCount}
-                    </span>
-                )}
+  const displayName =
+    profileData?.full_name ||
+    userProfileData?.profile?.fullName ||
+    profileData?.user?.first_name ||
+    user?.username ||
+    "Doctor Dashboard";
+  const displayEmail =
+    profileData?.user?.email || userProfileData?.user?.email || "";
+  const displayHospital =
+    profileData?.hospital || userProfileData?.profile?.hospital || "Hospital";
+  const displayDepartment = profileData?.specialization || "Dept";
+
+  const renderContent = () => {
+    if (loading && requests.length === 0 && screeningQueue.length === 0) {
+      return (
+        <div className="doctor-loading-state">Loading dashboard data...</div>
+      );
+    }
+
+    switch (activeTab) {
+      case DOCTOR_TABS.SCREENING_QUEUE:
+        return (
+          <DataTable
+            columns={[
+              "Camp",
+              "Donor",
+              "Blood Group",
+              "Phone",
+              "Status",
+              "Actions",
+            ]}
+            data={screeningQueue}
+            emptyMessage="No donors waiting for screening."
+            renderRow={(item) => (
+              <tr key={item.id}>
+                <td>{item.camp_title}</td>
+                <td>{item.donor_name}</td>
+                <td>{item.donor_blood_group || "N/A"}</td>
+                <td>{item.donor_phone || "N/A"}</td>
+                <td>
+                  <StatusBadge status={item.status} />
+                </td>
+                <td className="doctor-table-actions">
+                  <button
+                    type="button"
+                    className="dashboard btn btn-primary doctor-row-action"
+                    onClick={() => handleApproveDonor(item.id)}
+                    disabled={queueActionLoading === item.id}
+                    aria-label={`Approve donor ${item.donor_name}`}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="dashboard btn doctor-row-action doctor-danger-button"
+                    onClick={() => handleRejectDonor(item.id)}
+                    disabled={queueActionLoading === item.id}
+                    aria-label={`Reject donor ${item.donor_name}`}
+                  >
+                    Reject
+                  </button>
+                </td>
+              </tr>
+            )}
+          />
+        );
+      case DOCTOR_TABS.REQUEST_BLOOD:
+        return (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">New Blood Request</h2>
             </div>
-            <button
-                onClick={handleEmergencyRequest}
-                className="dashboard btn"
-                style={{
-                    backgroundColor: 'var(--color-critical)', color: 'white', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)'
-                }}
-            >
-                <Ambulance size={20} />
-                <span className="hidden sm:inline">EMERGENCY</span>
-            </button>
-        </div>
-    );
+            <div className="card-body">
+              <form
+                onSubmit={handleBloodRequestSubmit}
+                className="doctor-request-form-grid"
+              >
+                <div className="doctor-form-field">
+                  <label className="stat-label doctor-field-label">
+                    Blood Group Required
+                  </label>
+                  <select
+                    name="blood_group"
+                    required
+                    className="doctor-form-control"
+                  >
+                    <option value="A+">A+</option>
+                    <option value="A-">A-</option>
+                    <option value="B+">B+</option>
+                    <option value="B-">B-</option>
+                    <option value="O+">O+</option>
+                    <option value="O-">O-</option>
+                    <option value="AB+">AB+</option>
+                    <option value="AB-">AB-</option>
+                  </select>
+                </div>
+                <div className="doctor-form-field">
+                  <label className="stat-label doctor-field-label">
+                    Units Needed
+                  </label>
+                  <input
+                    name="units_requested"
+                    type="number"
+                    min="1"
+                    defaultValue="1"
+                    required
+                    className="doctor-form-control"
+                  />
+                </div>
+                <div className="doctor-form-field">
+                  <label className="stat-label doctor-field-label">
+                    Urgency Level
+                  </label>
+                  <select name="urgency" className="doctor-form-control">
+                    {REQUEST_URGENCY_OPTIONS.map((option) => (
+                      <option key={option}>{option}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="doctor-form-field doctor-form-field--full">
+                  <label className="stat-label doctor-field-label">
+                    Reason for Transfusion
+                  </label>
+                  <textarea
+                    name="reason"
+                    rows="2"
+                    placeholder="Surgery, Accident, etc."
+                    required
+                    className="doctor-form-control doctor-textarea"
+                  />
+                </div>
+                <div className="doctor-form-actions">
+                  <button
+                    type="submit"
+                    className="dashboard btn btn-primary doctor-submit-button"
+                    disabled={requestSubmitting}
+                  >
+                    {requestSubmitting ? "Submitting..." : "Submit Request"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      case DOCTOR_TABS.REQUESTS:
+        return (
+          <DataTable
+            columns={[
+              "Date",
+              "Blood Group",
+              "Units",
+              "Priority",
+              "Status",
+              "Notes",
+            ]}
+            data={requests}
+            emptyMessage="No requests found."
+            renderRow={(req) => (
+              <tr key={req.id}>
+                <td>{new Date(req.created_at).toLocaleDateString()}</td>
+                <td>
+                  <strong>{req.blood_group}</strong>
+                </td>
+                <td>{req.units_requested}</td>
+                <td>
+                  <StatusBadge status={req.priority_level} />
+                </td>
+                <td>
+                  <StatusBadge status={req.status} />
+                </td>
+                <td className="text-muted text-sm">
+                  {req.status === "REJECTED"
+                    ? req.rejection_note
+                    : req.status === "APPROVED"
+                      ? req.approval_note
+                      : "-"}
+                </td>
+              </tr>
+            )}
+          />
+        );
+      case DOCTOR_TABS.AVAILABILITY:
+        return (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">
+                Blood Availability (Live Inventory)
+              </h2>
+            </div>
+            <div className="card-body">
+              {Object.keys(inventory).length === 0 ? (
+                <div className="doctor-empty-state">
+                  <p>Inventory data currently unavailable.</p>
+                  <button
+                    type="button"
+                    className="dashboard btn btn-outline"
+                    onClick={fetchDashboardData}
+                  >
+                    Retry Fetch
+                  </button>
+                </div>
+              ) : (
+                <div className="doctor-inventory-grid">
+                  {Object.entries(inventory).map(([group, data]) => {
+                    const isLow =
+                      data.status === "LOW" || data.status === "CRITICAL";
+                    return (
+                      <div
+                        key={group}
+                        className={`doctor-inventory-card ${isLow ? "doctor-inventory-card--low" : "doctor-inventory-card--safe"}`}
+                      >
+                        <h3>{group}</h3>
+                        <div className="doctor-inventory-units">
+                          {data.units} Units
+                        </div>
+                        <div className="doctor-inventory-status">
+                          {data.status}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      case DOCTOR_TABS.SCANNER:
+        return (
+          <div className="card">
+            <div className="card-body">
+              <QRScanner />
+            </div>
+          </div>
+        );
+      case DOCTOR_TABS.PROFILE:
+        return (
+          <div className="card">
+            <div className="card-header">
+              <h2 className="card-title">My Profile</h2>
+            </div>
+            <div className="card-body">
+              {profileLoading && !profileData && !userProfileData ? (
+                <div className="doctor-loading-state">
+                  Loading profile details...
+                </div>
+              ) : (
+                <div className="doctor-profile-layout">
+                  <div className="doctor-profile-avatar-panel">
+                    <div className="doctor-profile-avatar">
+                      {profileImage ? (
+                        <img src={profileImage} alt="Profile" />
+                      ) : (
+                        <User size={80} color="var(--color-text-muted)" />
+                      )}
+                    </div>
+                    <label className="dashboard btn btn-outline doctor-upload-label">
+                      {profileUploading ? (
+                        <span className="doctor-upload-loading">
+                          <span className="doctor-spinner" aria-hidden="true" />
+                          Uploading...
+                        </span>
+                      ) : (
+                        <>
+                          <Camera size={16} /> Upload Photo
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        disabled={profileUploading}
+                        aria-label="Upload profile photo"
+                      />
+                    </label>
+                  </div>
+                  <div className="doctor-profile-fields">
+                    <div className="doctor-form-field">
+                      <label className="stat-label doctor-field-label">
+                        Full Name
+                      </label>
+                      <input
+                        type="text"
+                        value={displayName}
+                        readOnly
+                        className="doctor-readonly-input"
+                      />
+                    </div>
+                    <div className="doctor-form-field">
+                      <label className="stat-label doctor-field-label">
+                        Email
+                      </label>
+                      <input
+                        type="email"
+                        value={displayEmail}
+                        readOnly
+                        className="doctor-readonly-input"
+                      />
+                    </div>
+                    <div className="doctor-form-field">
+                      <label className="stat-label doctor-field-label">
+                        Hospital
+                      </label>
+                      <input
+                        type="text"
+                        value={displayHospital}
+                        readOnly
+                        className="doctor-readonly-input"
+                      />
+                    </div>
+                    <div className="doctor-form-field">
+                      <label className="stat-label doctor-field-label">
+                        Department
+                      </label>
+                      <input
+                        type="text"
+                        value={displayDepartment}
+                        readOnly
+                        className="doctor-readonly-input"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      case DOCTOR_TABS.DASHBOARD:
+      default: {
+        const pendingCount = requests.filter(
+          (r) => String(r.status).toUpperCase() === "PENDING",
+        ).length;
+        const completedCount = requests.filter((r) =>
+          isCompletedRequest(r.status),
+        ).length;
 
-    return (
-        <DashboardLayout
-            title={displayName}
-            subtitle={`${displayHospital} • ${displayDepartment}`}
-            brandLabel="Doctor Portal"
-            menuItems={menuItems}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            headerActions={headerActions}
-        >
-            {renderContent()}
-        </DashboardLayout>
-    );
+        return (
+          <>
+            <div className="stats-grid">
+              <StatCard
+                title="Total Requests"
+                value={requests.length}
+                Icon={ClipboardList}
+                colorClass="text-primary"
+              />
+              <StatCard
+                title="Pending Requests"
+                value={pendingCount}
+                Icon={Clock}
+                colorClass="text-warning"
+              />
+              <StatCard
+                title="Donors Waiting Screening"
+                value={screeningQueue.length}
+                Icon={Stethoscope}
+                colorClass="text-info"
+              />
+              <StatCard
+                title="Completed Requests"
+                value={completedCount}
+                Icon={CheckCircle}
+                colorClass="text-success"
+              />
+            </div>
+            {refreshing && (
+              <div className="doctor-refreshing-state">
+                Refreshing dashboard...
+              </div>
+            )}
+          </>
+        );
+      }
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  const headerActions = (
+    <div className="doctor-header-actions">
+      <button
+        type="button"
+        className="doctor-notification-button"
+        onClick={handleOpenNotifications}
+        aria-label={`Open notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        title="Notifications"
+      >
+        <Bell size={24} />
+        {unreadCount > 0 && (
+          <span className="doctor-notification-badge">{unreadCount}</span>
+        )}
+      </button>
+      <button
+        type="button"
+        onClick={handleEmergencyRequest}
+        className="dashboard btn doctor-emergency-button"
+        aria-label="Create emergency blood request"
+      >
+        <Ambulance size={20} />
+        <span>EMERGENCY</span>
+      </button>
+    </div>
+  );
+
+  return (
+    <DashboardLayout
+      title={displayName}
+      subtitle={`${displayHospital} • ${displayDepartment}`}
+      brandLabel="Doctor Portal"
+      menuItems={MENU_ITEMS} // <-- Using the stable constant here stops the sidebar flash!
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      headerActions={headerActions}
+    >
+      <div className="doctor-dashboard-page">{renderContent()}</div>
+    </DashboardLayout>
+  );
 };
 
 export default DoctorDashboard;

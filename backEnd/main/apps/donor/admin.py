@@ -5,6 +5,7 @@ from .models.campRegistration import CampRegistration
 from .models.donationHistory import DonationHistory
 from .models.donorAlert import DonorAlert
 from .models.donorDetails import DonorDetails
+from .models.campBloodCollection import CampBloodCollection
 from .models.workflowNotification import WorkflowNotification
 
 
@@ -32,7 +33,7 @@ class DonationHistoryAdmin(admin.ModelAdmin):
 
 @admin.register(BloodCamp)
 class BloodCampAdmin(admin.ModelAdmin):
-    list_display = ("title", "organizer", "date", "status", "location")
+    list_display = ("title", "organizer", "date", "status", "location", "destination_hospital")
     list_filter = ("status", "date")
     search_fields = ("title", "location", "organizer__username")
     date_hierarchy = "date"
@@ -50,3 +51,13 @@ class WorkflowNotificationAdmin(admin.ModelAdmin):
     list_display = ("user", "event_type", "is_read", "created_at")
     list_filter = ("event_type", "is_read")
     search_fields = ("message", "user__username", "user__email")
+
+
+@admin.register(CampBloodCollection)
+class CampBloodCollectionAdmin(admin.ModelAdmin):
+    list_display = (
+        "camp", "donor", "blood_type", "units",
+        "destination_hospital", "status", "collected_at",
+    )
+    list_filter = ("status", "blood_type", "destination_hospital")
+    search_fields = ("camp__title", "donor__user__username")

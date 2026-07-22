@@ -20,9 +20,9 @@ const LabDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState(null);
 
-    const loadData = async (campIdOverride = null) => {
+    const loadData = async (campIdOverride = null, silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const [campData, notificationData] = await Promise.all([
                 getOrganizerCamps(),
                 getWorkflowNotifications(),
@@ -42,13 +42,13 @@ const LabDashboard = () => {
         } catch (error) {
             Swal.fire('Error', error.response?.data?.detail || 'Failed to load staff dashboard data.', 'error');
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
     useEffect(() => {
         loadData();
-        const timer = setInterval(() => loadData(), 8000);
+        const timer = setInterval(() => loadData(null, true), 8000);
         return () => clearInterval(timer);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);

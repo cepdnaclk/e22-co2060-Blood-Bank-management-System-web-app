@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ..models.bloodCamp import BloodCamp
+from ..models.campBloodCollection import CampBloodCollection
 from ..models.campRegistration import CampRegistration
 from ..models.donationHistory import DonationHistory
 from ..models.donorAlert import DonorAlert
@@ -364,14 +365,31 @@ class CompleteCampRegistrationView(APIView):
                 message=f"Thank you for donating blood at {registration.camp.title}! Your contribution saves lives.",
                 alert_type="eligibility",
             )
+            # NEW: Auto-create CampBloodCollection for camp→hospital tracking
+            blood_group = getattr(
+                getattr(donor.user, "profile", None),
+                "blood_group",
+                "Unknown",
+            ) or "Unknown"
+
+            CampBloodCollection.objects.create(
+                camp=registration.camp,
+                registration=registration,
+                donor=donor,
+                blood_type=blood_group,
+                units=1,
+                destination_hospital=registration.camp.destination_hospital,
+                status="collected",
+            )
+
             _notify_users(
                 users=list(User.objects.filter(role=ROLE_ADMIN, is_active=True)),
                 event_type="donor_donated",
-                message=f"Donation completed at {registration.camp.title}. Inventory update required.",
+                message=f"Donation completed at {registration.camp.title}. Blood collected and ready for dispatch.",
                 metadata={"registration_id": registration.id, "camp_id": registration.camp_id},
             )
 
-        return Response({"detail": "Donor marked as donated and history updated."}, status=status.HTTP_200_OK)
+        return Response({"detail": "Donor marked as donated and blood collection recorded."}, status=status.HTTP_200_OK)
 
 
 class DonorAfterDonateView(APIView):

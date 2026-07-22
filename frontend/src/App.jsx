@@ -28,7 +28,13 @@ import NotFound from "./pages/public/NotFound";
 import './App.css';
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import DoctorsList from "./pages/admin/DoctorsList.jsx";
-import InventoryPage from "./pages/admin/InventoryPage.jsx";
+import NationalInventoryDashboard from "./pages/admin/NationalInventoryDashboard.jsx";
+import HospitalInventoryDetail from "./pages/admin/HospitalInventoryDetail.jsx";
+import ExpiryAlertsPage from "./pages/admin/ExpiryAlertsPage.jsx";
+import CampBloodTrackingPage from "./pages/admin/CampBloodTrackingPage.jsx";
+import BloodRequestsPage from "./pages/admin/BloodRequestsPage.jsx";
+import DonationsPage from "./pages/admin/DonationsPage.jsx";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage.jsx";
 import PublicDonorScan from "./pages/donor/publicDonorScan.jsx";
 
 import BloodCamps from './pages/bloodcamp/BloodCamps';
@@ -106,7 +112,13 @@ function App() {
             <Route path="/admin" element={<RoleRoute allowedRoles={['admin']}><AdminLayout /></RoleRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="doctors" element={<DoctorsList />} />
-              <Route path="inventory" element={<InventoryPage />} />
+              <Route path="inventory" element={<NationalInventoryDashboard />} />
+              <Route path="inventory/hospital/:hospitalId" element={<HospitalInventoryDetail />} />
+              <Route path="expiry-alerts" element={<ExpiryAlertsPage />} />
+              <Route path="camp-blood" element={<CampBloodTrackingPage />} />
+              <Route path="requests" element={<BloodRequestsPage />} />
+              <Route path="donations" element={<DonationsPage />} />
+              <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

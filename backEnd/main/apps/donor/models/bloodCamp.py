@@ -28,6 +28,20 @@ class BloodCamp(models.Model):
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="Upcoming"
     )
+
+    # NEW: Destination hospital where collected blood will be sent
+    destination_hospital = models.ForeignKey(
+        "UserAuth.Hospital",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="receiving_camps",
+        help_text="Hospital that will receive blood collected at this camp",
+    )
+
+    # NEW: Track totals
+    total_collected_units = models.PositiveIntegerField(default=0)
+
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

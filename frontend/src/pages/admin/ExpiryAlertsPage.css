@@ -1,0 +1,57 @@
+.expiry-alerts-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.alerts-header-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+@media (min-width: 768px) {
+  .alerts-header-section {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.alerts-filter-tabs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.alert-type-pill {
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alert-type-pill.expired {
+  background-color: var(--color-critical-bg);
+  color: var(--color-critical);
+}
+
+.alert-type-pill.expiring_critical {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+}
+
+.alert-type-pill.expiring_soon {
+  background-color: var(--color-expiring-bg);
+  color: var(--color-expiring);
+}
+
+.resolve-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+}

@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../../context/auth/useAuth';
 import Swal from 'sweetalert2';
 import api from '../../api/api';
+import '../bloodcamp/BloodCamps.css';
 
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import StatCard from '../../components/ui/StatCard';
@@ -184,34 +185,34 @@ const CampDashboard = () => {
   const renderContent = () => {
     if (activeTab === 'create') {
       return (
-        <div style={{ backgroundColor: 'var(--color-secondary)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-          <h2 style={{ marginBottom: '20px', color: 'var(--color-text-main)' }}>Create New Blood Camp</h2>
+        <div className="form-container">
+          <h2>Create New Blood Camp</h2>
           <form onSubmit={handleCreateCamp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="stat-label">Camp Title</label>
-              <input type="text" required value={newCamp.title} onChange={e => setNewCamp({ ...newCamp, title: e.target.value })} placeholder="e.g. Summer Blood Drive" style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              <label>Camp Title</label>
+              <input type="text" required value={newCamp.title} onChange={e => setNewCamp({ ...newCamp, title: e.target.value })} placeholder="e.g. Summer Blood Drive" />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="stat-label">Date</label>
-                <input type="date" required value={newCamp.date} onChange={e => setNewCamp({ ...newCamp, date: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+                <label>Date</label>
+                <input type="date" required value={newCamp.date} onChange={e => setNewCamp({ ...newCamp, date: e.target.value })} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="stat-label">Start Time</label>
-                <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({ ...newCamp, start_time: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+                <label>Start Time</label>
+                <input type="time" required value={newCamp.start_time} onChange={e => setNewCamp({ ...newCamp, start_time: e.target.value })} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label className="stat-label">End Time</label>
-                <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({ ...newCamp, end_time: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+                <label>End Time</label>
+                <input type="time" required value={newCamp.end_time} onChange={e => setNewCamp({ ...newCamp, end_time: e.target.value })} />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="stat-label">Location</label>
-              <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              <label>Location</label>
+              <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <label className="stat-label">Description</label>
-              <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({ ...newCamp, description: e.target.value })} style={{ padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)', resize: 'vertical' }} />
+              <label>Description</label>
+              <textarea rows="3" value={newCamp.description} onChange={e => setNewCamp({ ...newCamp, description: e.target.value })} />
             </div>
             <button type="submit" className="dashboard btn btn-primary" style={{ padding: '12px', marginTop: '10px' }}>Publish Camp</button>
           </form>
@@ -240,24 +241,24 @@ const CampDashboard = () => {
 
     if (activeTab === 'profile') {
       return (
-        <div style={{ backgroundColor: 'var(--color-secondary)', padding: '24px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--color-border)' }}>
-          <h2 style={{ marginBottom: '20px', color: 'var(--color-text-main)' }}>Organizer Profile</h2>
+        <div className="form-container">
+          <h2>Organizer Profile</h2>
           <div style={{ display: 'grid', gap: '20px', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
             <div>
-              <label className="stat-label" style={{display: 'block'}}>Full Name</label>
-              <input type="text" value={profile?.fullName || profileUser?.username || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              <label>Full Name</label>
+              <input type="text" value={profile?.fullName || profileUser?.username || ''} readOnly />
             </div>
             <div>
-              <label className="stat-label" style={{display: 'block'}}>Email Address</label>
-              <input type="email" value={profileUser?.email || user?.email || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              <label>Email Address</label>
+              <input type="email" value={profileUser?.email || user?.email || ''} readOnly />
             </div>
             <div>
-              <label className="stat-label" style={{display: 'block'}}>Phone</label>
-              <input type="text" value={profile?.phoneNumber || 'N/A'} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)' }} />
+              <label>Phone</label>
+              <input type="text" value={profile?.phoneNumber || 'N/A'} readOnly />
             </div>
             <div>
-              <label className="stat-label" style={{display: 'block'}}>Role</label>
-              <input type="text" value={profileUser?.role || user?.role || ''} readOnly style={{ width: '100%', padding: '10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-secondary-light)', color: 'var(--color-text-main)', textTransform: 'capitalize' }} />
+              <label>Role</label>
+              <input type="text" value={profileUser?.role || user?.role || ''} readOnly style={{ textTransform: 'capitalize' }} />
             </div>
           </div>
         </div>

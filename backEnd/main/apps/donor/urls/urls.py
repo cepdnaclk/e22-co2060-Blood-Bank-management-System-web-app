@@ -14,6 +14,13 @@ from ..services.bloodCampService import (
     CompleteCampRegistrationView,
     DonorAfterDonateView,
 )
+from ..services.campBloodTransferService import (
+    camp_collections_list,
+    dispatch_camp_blood,
+    pending_camp_blood_list,
+    receive_camp_blood,
+    verify_camp_blood,
+)
 from ..services.donationHistoryService import DonorDonationHistoryView
 from ..services.donorAlertService import DonorAlertListView, DonorAlertMarkReadView
 from ..services.donorDashboardService import DonorDashboardView
@@ -49,4 +56,11 @@ path('camps/donated-history/', DonorAfterDonateView.as_view(), name='organizer-d
 
     path('camps/registrations/<int:pk>/donate/', CompleteCampRegistrationView.as_view(), name='donate-camp-registration'),
     path('camps/registrations/<int:pk>/complete/', CompleteCampRegistrationView.as_view(), name='complete-camp-registration'),
+
+    # Camp Blood Transfer Routes
+    path('camps/<int:camp_id>/collections/', camp_collections_list, name='camp-collections-list'),
+    path('camps/<int:camp_id>/collections/dispatch/', dispatch_camp_blood, name='dispatch-camp-blood'),
+    path('camp-blood/pending/', pending_camp_blood_list, name='pending-camp-blood-list'),
+    path('camp-blood/<int:collection_id>/receive/', receive_camp_blood, name='receive-camp-blood'),
+    path('camp-blood/<int:collection_id>/verify/', verify_camp_blood, name='verify-camp-blood'),
 ]

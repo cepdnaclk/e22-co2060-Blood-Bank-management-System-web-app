@@ -8,6 +8,7 @@ class BloodCampSerializer(serializers.ModelSerializer):
     """Serializer for Blood Camps. Read-only for donors, read-write for organizers."""
 
     organizer_name = serializers.CharField(source="organizer.username", read_only=True)
+    destination_hospital_name = serializers.CharField(source="destination_hospital.hosName", read_only=True, default=None)
 
     class Meta:
         model = BloodCamp
@@ -21,9 +22,12 @@ class BloodCampSerializer(serializers.ModelSerializer):
             "location",
             "description",
             "status",
+            "destination_hospital",
+            "destination_hospital_name",
+            "total_collected_units",
             "created_at",
         ]
-        read_only_fields = ["id", "organizer", "organizer_name", "created_at"]
+        read_only_fields = ["id", "organizer", "organizer_name", "destination_hospital_name", "total_collected_units", "created_at"]
 
 
 class CampRegistrationSerializer(serializers.ModelSerializer):

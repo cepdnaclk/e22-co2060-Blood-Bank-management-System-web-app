@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, Activity, MapPin, Search, PhoneCall, ArrowRight, Shield, Clock, ChevronDown, Calendar } from 'lucide-react';
+import { Heart, Activity, MapPin, Search, PhoneCall, ArrowRight, Shield, Clock, ChevronDown, Calendar, Droplet } from 'lucide-react';
 import './LandingPage.css';
 import { LANDING } from '../../config/imageAssets';
 
@@ -8,6 +8,7 @@ import video1 from '../../assets/backgroundvideos/video01.mp4';
 import video2 from '../../assets/backgroundvideos/video02.mp4';
 
 import { getLatestPublicCamp } from '../../services/campService';
+import { getAllHospitalsStock } from '../../api/inventoryService';
 
 const LandingPage = () => {
 const DEFAULT_STOCK = {
@@ -26,6 +27,12 @@ const [lastUpdated, setLastUpdated] = useState(null);
 const [stockLoading, setStockLoading] = useState(true);
 const [stockError, setStockError] = useState("");
 const [latestCamp, setLatestCamp] = useState(null);
+
+// Hospital stock state
+const [hospitalsStock, setHospitalsStock] = useState([]);
+const [hospitalsLoading, setHospitalsLoading] = useState(true);
+const [hospitalSearch, setHospitalSearch] = useState('');
+const [districtFilter, setDistrictFilter] = useState('');
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api/v1";
 
@@ -65,12 +72,37 @@ const fetchLatestCamp = async () => {
     }
 };
 
+const fetchHospitalsStock = async () => {
+    try {
+        setHospitalsLoading(true);
+        const { success, data } = await getAllHospitalsStock();
+        if (success && data.hospitals) {
+            setHospitalsStock(data.hospitals);
+        }
+    } catch (error) {
+        console.error("Error fetching hospitals stock:", error);
+    } finally {
+        setHospitalsLoading(false);
+    }
+};
+
 useEffect(() => {
     fetchLiveStock();
     fetchLatestCamp();
+    fetchHospitalsStock();
     const intervalId = setInterval(fetchLiveStock, 60000); // refresh every 60s
     return () => clearInterval(intervalId);
 }, []);
+
+// Extract unique districts from the hospital data
+const districts = [...new Set(hospitalsStock.map(h => h.district))].filter(Boolean).sort();
+
+// Filter the hospital list
+const filteredHospitals = hospitalsStock.filter(h => {
+    const matchesSearch = h.name.toLowerCase().includes(hospitalSearch.toLowerCase());
+    const matchesDistrict = districtFilter === '' || h.district === districtFilter;
+    return matchesSearch && matchesDistrict;
+});
 
 
     // Intersection Observer for scroll animations
@@ -263,24 +295,83 @@ useEffect(() => {
                 </div>
             </section>
 
-            {/* Map Mock Section */}
+            {/* Hospital Stock Map/Table Section */}
             <section className="map-section-new animate-on-scroll">
                 <div className="container">
                     <div className="map-header">
-                        <h2><MapPin size={28} /> Find Nearby Blood Camps</h2>
-                        <p>Locate active donation centers and urgent hospital requests in your district.</p>
+                        <h2><MapPin size={28} /> Regional Blood Banks Stock</h2>
+                        <p>Locate active blood banks and check their real-time inventory status before you donate.</p>
                     </div>
-                    <div className="map-mockup-wrapper" style={{ padding: '0', overflow: 'hidden', height: '400px', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)' }}>
-                        <iframe
-                            title="National Blood Center Location"
-                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3960.671046714073!2d79.85871807469796!3d6.929871593069695!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3ae2591146399bd5%3A0xc02cf3c9f53eec0!2sNational%20Blood%20Center!5e0!3m2!1sen!2slk!4v1711200000000!5m2!1sen!2slk"
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            allowFullScreen=""
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                        ></iframe>
+                    
+                    <div className="hospital-stock-wrapper bg-white rounded-lg shadow-lg overflow-hidden border border-gray-100">
+                        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50">
+                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2 m-0">
+                                <Droplet size={20} className="text-red-500" /> Hospital Inventories
+                            </h3>
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <select 
+                                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-primary focus:border-primary bg-white outline-none"
+                                    value={districtFilter}
+                                    onChange={(e) => setDistrictFilter(e.target.value)}
+                                >
+                                    <option value="">All Districts</option>
+                                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                                </select>
+                                <div className="relative flex-grow sm:flex-grow-0">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search size={16} className="text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search hospital..."
+                                        className="pl-9 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:ring-primary focus:border-primary outline-none"
+                                        value={hospitalSearch}
+                                        onChange={(e) => setHospitalSearch(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="overflow-x-auto max-h-[400px]">
+                            {hospitalsLoading ? (
+                                <div className="p-10 text-center text-gray-500">Loading hospital data...</div>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="bg-gray-50 sticky top-0 z-10 shadow-sm">
+                                        <tr>
+                                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Hospital Name</th>
+                                            <th className="px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">District</th>
+                                            <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredHospitals.length > 0 ? (
+                                            filteredHospitals.map(h => (
+                                                <tr key={h.id} className="hover:bg-red-50 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <span className="font-medium text-gray-900">{h.name}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-gray-600 text-sm">{h.district || 'Unassigned'}</td>
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                                            h.status === 'Normal' ? 'bg-green-100 text-green-800' :
+                                                            h.status === 'Low' ? 'bg-yellow-100 text-yellow-800' :
+                                                            'bg-red-100 text-red-800'
+                                                        }`}>
+                                                            {h.status}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="3" className="px-6 py-8 text-center text-gray-500">No hospitals match your search.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </div>
                 </div>
             </section>

@@ -1,0 +1,42 @@
+.camp-blood-tracking-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.tracking-header-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-4);
+}
+
+@media (min-width: 768px) {
+  .tracking-header-section {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+.transit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.transit-badge.transit {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+}
+
+.transit-badge.received {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning);
+}

@@ -14,13 +14,17 @@
 }
 
 .camps-hero::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(198, 40, 40, 0.2), transparent 70%);
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(198, 40, 40, 0.2),
+    transparent 70%
+  );
   pointer-events: none;
 }
 
@@ -117,13 +121,17 @@
   display: flex;
   flex-direction: column;
   transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05), 0 0 15px rgba(198, 40, 40, 0.05);
+  box-shadow:
+    0 4px 20px rgba(0, 0, 0, 0.05),
+    0 0 15px rgba(198, 40, 40, 0.05);
   border: 1px solid rgba(198, 40, 40, 0.05);
 }
 
 .camp-card:hover .camp-card-inner {
   transform: translateY(-8px);
-  box-shadow: 0 12px 30px rgba(198, 40, 40, 0.15), 0 0 20px rgba(198, 40, 40, 0.1);
+  box-shadow:
+    0 12px 30px rgba(198, 40, 40, 0.15),
+    0 0 20px rgba(198, 40, 40, 0.1);
   border-color: rgba(198, 40, 40, 0.2);
 }
 
@@ -135,7 +143,7 @@
 }
 
 .camp-img-box::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -258,7 +266,8 @@
 }
 
 /* Loading & No Results */
-.camps-loading, .no-camps {
+.camps-loading,
+.no-camps {
   text-align: center;
   padding: 4rem 2rem;
 }
@@ -275,8 +284,12 @@
 }
 
 @keyframes rotation {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .no-camps h3 {
@@ -344,17 +357,66 @@
   opacity: 1;
   transform: translateY(0);
 }
+/* =========================================
+   Create Camp Form Overrides 
+   ========================================= */
+
+/* Target the dark container holding the form */
+.form-container {
+  /* Assuming this is your dark slate background */
+  background-color: #2d3748; /* Or whatever dark slate you are using */
+  padding: 2rem;
+  border-radius: var(--radius-lg, 12px);
+}
+
+/* Fix the Main Heading contrast */
+.form-container h2,
+.form-container .camp-title-heading {
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 2rem;
+}
+
+/* Fix the Form Labels contrast */
+.form-container label {
+  color: #e2e8f0; /* Light grayish-blue for excellent readability */
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* Optional: Ensure inputs look good against the dark background */
+.form-container input,
+.form-container textarea {
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1a202c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.form-container input:focus,
+.form-container textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
   .camps-hero h1 {
     font-size: 2.25rem;
   }
-  
+
   .camps-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .promo-content h2 {
     font-size: 2rem;
   }

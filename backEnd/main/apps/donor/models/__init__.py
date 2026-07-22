@@ -1,4 +1,5 @@
 from .bloodCamp import BloodCamp
+from .campBloodCollection import CampBloodCollection
 from .campRegistration import CampRegistration
 from .donationHistory import DonationHistory
 from .donorAlert import DonorAlert
@@ -11,5 +12,6 @@ __all__ = [
     "DonationHistory",
     "BloodCamp",
     "CampRegistration",
+    "CampBloodCollection",
     "WorkflowNotification",
 ]

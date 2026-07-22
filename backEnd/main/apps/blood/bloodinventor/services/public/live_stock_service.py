@@ -1,11 +1,10 @@
+from django.db.models import Sum
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from ...selectors.inventory_read_selector import (
-    get_available_units_grouped_by_blood_type,
-)
+from ...models.bloodinventor import BloodInventory
 
 BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]
 
@@ -21,16 +20,35 @@ def get_stock_status(total):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def live_stock(request):
+    """
+    GET /api/v1/blood/live-stock/
+    Enhanced live stock — supports optional hospital_id and district_id filters.
+    Without filters: returns national aggregate.
+    """
     today = timezone.localdate()
-    units_by_type = get_available_units_grouped_by_blood_type(today)
+    hospital_id = request.query_params.get("hospital_id")
+    district_id = request.query_params.get("district_id")
 
-    stock = {}
+    qs = BloodInventory.objects.filter(status="available", expiry_date__gte=today)
+
+    if hospital_id:
+        qs = qs.filter(hospital_id=hospital_id)
+    if district_id:
+        qs = qs.filter(hospital__district_id=district_id)
+
+    rows = qs.values("blood_type").annotate(total_units=Sum("quantity"))
+    units_by_type = {row["blood_type"]: int(row["total_units"] or 0) for row in rows}
+
+    stocks = []
     for blood_type in BLOOD_TYPES:
         units = units_by_type.get(blood_type, 0)
-        stock[blood_type] = {
+        stocks.append({
+            "bloodType": blood_type,
             "units": units,
             "status": get_stock_status(units),
-        }
+        })
 
-    return Response(stock, status=200)
-
+    return Response({
+        "updatedAt": timezone.now().isoformat(),
+        "stocks": stocks
+    }, status=200)

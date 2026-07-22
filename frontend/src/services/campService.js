@@ -77,3 +77,14 @@ export const markWorkflowNotificationRead = async (id) => {
   const response = await api.patch(`donor/notifications/${id}/read/`, { is_read: true });
   return response.data;
 };
+
+// Blood Collection and Dispatch
+export const getCampCollections = async (campId) => {
+  const response = await api.get(`donor/camps/${campId}/collections/`);
+  return response.data;
+};
+
+export const dispatchCampBlood = async (campId) => {
+  const response = await api.post(`donor/camps/${campId}/collections/dispatch/`);
+  return response.data;
+};

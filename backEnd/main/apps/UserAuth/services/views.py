@@ -12,7 +12,7 @@ from ..models import Profile
 from ..models.hospital import Hospital
 from ..serializer.payload.payload import MyTokenObtainPairSerializer
 from ..serializer.request.register import RegisterSerializer
-from ..serializer.response.serializer import ProfileSerializer, UserSerializer
+from ..serializer.response.serializer import ProfileSerializer, UserSerializer, HospitalSerializer
 
 User = get_user_model()
 
@@ -217,3 +217,26 @@ def resolve_hospital(request):
         _update_hospital_if_changed(hospital, latitude, longitude, address)
 
     return Response({"id": hospital.id, "name": hospital.hosName}, status=200)
+
+
+class HospitalManagementView(generics.ListCreateAPIView):
+    """
+    GET /api/v1/auth/hospitals/
+    POST /api/v1/auth/hospitals/
+    Allow Admins to list and create hospitals manually.
+    """
+    queryset = Hospital.objects.all().order_by('-id')
+    serializer_class = HospitalSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Allow all authenticated users to GET (so organizers can see the list in dropdowns)
+        # But if you want it strict to Admin for GET, check here.
+        return super().get_queryset()
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Only System Administrators can register hospitals manually.")
+        serializer.save()
+

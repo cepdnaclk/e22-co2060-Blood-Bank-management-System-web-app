@@ -36,6 +36,7 @@ import BloodRequestsPage from "./pages/admin/BloodRequestsPage.jsx";
 import DonationsPage from "./pages/admin/DonationsPage.jsx";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage.jsx";
 import PublicDonorScan from "./pages/donor/publicDonorScan.jsx";
+import HospitalManagement from "./pages/admin/HospitalManagement.jsx";
 
 import BloodCamps from './pages/bloodcamp/BloodCamps';
 
@@ -90,7 +91,7 @@ function App() {
               } />
 
               <Route path="/inventory" element={
-                <RoleRoute allowedRoles={['Inventor', 'admin']}>
+                <RoleRoute allowedRoles={['Inventor', 'inventor', 'admin']}>
                   <StaffDashboard />
                 </RoleRoute>
               } />
@@ -112,6 +113,7 @@ function App() {
             <Route path="/admin" element={<RoleRoute allowedRoles={['admin']}><AdminLayout /></RoleRoute>}>
               <Route index element={<AdminDashboard />} />
               <Route path="doctors" element={<DoctorsList />} />
+              <Route path="hospitals" element={<HospitalManagement />} />
               <Route path="inventory" element={<NationalInventoryDashboard />} />
               <Route path="inventory/hospital/:hospitalId" element={<HospitalInventoryDetail />} />
               <Route path="expiry-alerts" element={<ExpiryAlertsPage />} />

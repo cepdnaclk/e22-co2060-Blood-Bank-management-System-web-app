@@ -6,7 +6,6 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 
 import StatCard from '../../components/ui/StatCard';
 import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
-import './NationalInventoryDashboard.css';
 
 const NationalInventoryDashboard = () => {
     const navigate = useNavigate();
@@ -56,17 +55,17 @@ const NationalInventoryDashboard = () => {
     }));
 
     return (
-        <div className="national-inventory-container">
-            <div className="inventory-header-section">
+        <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "-10px" }}>
                 <div>
-                    <h1 style={{ marginBottom: '4px' }}>National Blood Inventory</h1>
-                    <p className="text-muted text-sm">
+                    <h2 style={{ marginBottom: '4px', marginTop: 0 }}>National Blood Inventory</h2>
+                    <p className="text-muted text-sm" style={{ margin: 0 }}>
                         Aggregated view of all hospital blood banks. Last updated: {new Date(dashboardData.updatedAt).toLocaleString()}
                     </p>
                 </div>
                 <button 
-                    onClick={fetchDashboard}
-                    className="btn btn-outline dashboard"
+                    onClick={() => fetchDashboard(false)}
+                    className="dashboard btn btn-outline"
                     style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                     <Activity size={16} /> Refresh Data
@@ -104,59 +103,61 @@ const NationalInventoryDashboard = () => {
             </div>
 
             {/* Main Content Area */}
-            <div className="inventory-main-grid">
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "24px" }}>
                 
                 {/* Left Col: Chart */}
-                <div className="chart-card-wrapper">
-                    <h2 style={{ fontSize: '18px', marginBottom: '16px' }}>National Stock by Blood Type</h2>
-                    <div className="chart-container-box">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
-                                <XAxis dataKey="name" />
-                                <YAxis />
-                                <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px' }} />
-                                <Bar dataKey="units" radius={[4, 4, 0, 0]}>
-                                    {chartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                <div className="card">
+                    <div className="card-header">
+                        <h4 className="card-title">National Stock by Blood Type</h4>
                     </div>
-                    <div className="blood-type-grid-summary">
-                        {dashboardData.nationalStock.map(item => (
-                            <div key={item.bloodType} className="blood-summary-item">
-                                <span className="blood-summary-label">{item.bloodType}</span>
-                                <span className="blood-summary-val">{item.units} <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>units</span></span>
-                            </div>
-                        ))}
+                    <div className="card-body">
+                        <div style={{ height: "260px", marginBottom: "24px" }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 5 }}>
+                                    <XAxis dataKey="name" />
+                                    <YAxis />
+                                    <Tooltip cursor={{fill: 'transparent'}} contentStyle={{ borderRadius: '8px' }} />
+                                    <Bar dataKey="units" radius={[4, 4, 0, 0]}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "12px" }}>
+                            {dashboardData.nationalStock.map(item => (
+                                <li key={item.bloodType} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--color-border)", paddingBottom: "8px" }}>
+                                    <span style={{ fontWeight: 600, color: "var(--color-primary)" }}>{item.bloodType}</span>
+                                    <strong>{item.units} <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>units</span></strong>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
                 </div>
 
                 {/* Right Col: Hospital Table */}
-                <div className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-                    <div className="card-header" style={{ padding: '16px 24px', borderBottom: '1px solid var(--color-border)' }}>
-                        <div className="table-header-toolbar">
-                            <h2 style={{ margin: 0, fontSize: '18px' }}>Hospital Inventories</h2>
-                            <div className="table-filters-wrapper">
-                                <select 
-                                    className="select-filter-input"
-                                    value={filterDistrict}
-                                    onChange={(e) => setFilterDistrict(e.target.value)}
-                                >
-                                    <option value="">All Districts</option>
-                                    {districts.map(d => <option key={d} value={d}>{d}</option>)}
-                                </select>
-                                <div className="search-filter-box">
-                                    <Search size={16} className="search-filter-icon" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search hospital..."
-                                        className="search-filter-input"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
-                                </div>
+                <div className="card">
+                    <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+                        <h4 className="card-title" style={{ margin: 0 }}>Hospital Inventories</h4>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
+                            <select 
+                                style={{ border: "1px solid var(--color-border)", borderRadius: "var(--radius-md)", padding: "8px 12px", backgroundColor: "var(--color-surface)", color: "var(--color-text-main)", fontSize: "var(--font-size-sm)", outline: "none" }}
+                                value={filterDistrict}
+                                onChange={(e) => setFilterDistrict(e.target.value)}
+                            >
+                                <option value="">All Districts</option>
+                                {districts.map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                            <div style={{ position: "relative", width: "200px" }}>
+                                <Search size={18} style={{ position: "absolute", left: "12px", top: "10px", color: "var(--color-text-muted)" }} />
+                                <input
+                                    type="text"
+                                    placeholder="Search hospital..."
+                                    style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: "var(--radius-md)", border: "1px solid var(--color-border)", backgroundColor: "var(--color-surface)", color: "var(--color-text-main)" }}
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                         </div>
                     </div>
@@ -183,8 +184,8 @@ const NationalInventoryDashboard = () => {
                                 <td>
                                     <button 
                                         onClick={() => navigate(`/admin/inventory/hospital/${hospital.id}`)}
-                                        className="btn btn-outline dashboard"
-                                        style={{ padding: '4px 8px', fontSize: '12px', gap: '4px' }}
+                                        className="dashboard btn btn-outline"
+                                        style={{ padding: '6px', fontSize: '12px', gap: '4px' }}
                                     >
                                         View <ArrowRight size={14} />
                                     </button>

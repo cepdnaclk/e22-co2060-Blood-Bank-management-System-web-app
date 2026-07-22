@@ -37,8 +37,8 @@ export const ICON_MAP = {
 const ROLE_CONFIG = {
     admin: {
         label: 'System Administrator',
-        dashboard: '/adminDashboard',
-        allowedRoutes: ['/adminDashboard', '/staff', '/doctor', '/donor', '/patient', '/events'],
+        dashboard: '/admin',
+        allowedRoutes: ['/admin', '/staff', '/doctor', '/donor', '/patient', '/events'],
         navItems: [
             { path: '/doctor',  label: 'Medical',  icon: 'Activity' },
             { path: '/staff',   label: 'Lab',      icon: 'ClipboardList' },
@@ -80,6 +80,15 @@ const ROLE_CONFIG = {
         navItems: [
             { path: '/bloodcamp', label: 'Camp', icon: 'Calendar' },
             { path: '/staff', label: 'Lab', icon: 'ClipboardList' },
+        ],
+    },
+
+    inventor: {
+        label: 'Inventory Officer',
+        dashboard: '/inventory',
+        allowedRoutes: ['/inventory', '/events'],
+        navItems: [
+            { path: '/inventory', label: 'Inventory', icon: 'ClipboardList' },
         ],
     },
 };

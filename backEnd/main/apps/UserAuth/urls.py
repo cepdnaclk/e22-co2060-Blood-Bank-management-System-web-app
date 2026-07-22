@@ -9,6 +9,7 @@ from .services.views import (
     logout_view,
     resolve_hospital,
     update_user_profile,
+    HospitalManagementView,
 )
 
 urlpatterns = [
@@ -21,6 +22,7 @@ urlpatterns = [
     path("profile/", get_user_profile, name="user_profile"),
     path("profile/update/", update_user_profile, name="update_profile"),
     path("getuser/", get_user_info, name="user_info"),
+    path("hospitals/", HospitalManagementView.as_view(), name="hospital_management"),
     path("hospitals/resolve/", resolve_hospital, name="resolve_hospital"),
 
     # Password Reset (REST API — works with React frontend)

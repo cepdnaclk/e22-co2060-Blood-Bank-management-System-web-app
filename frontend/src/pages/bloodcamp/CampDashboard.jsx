@@ -9,12 +9,15 @@ import {
   markRegistrationArrived,
   markWorkflowNotificationRead,
   sendRegistrationToScreening,
-  getOrganizerDonatedHistory
+  getOrganizerDonatedHistory,
+  getCampCollections,
+  dispatchCampBlood
 } from '../../services/campService';
+import { getAllHospitalsStock } from '../../api/inventoryService';
 import { 
   LayoutDashboard, Calendar, MapPin, Clock, Plus, CheckCircle, 
   LogOut, User, Activity, Bell, Settings, History, Droplet, 
-  Users, AlertTriangle, CalendarDays, ClipboardList
+  Users, AlertTriangle, CalendarDays, ClipboardList, Truck
 } from 'lucide-react';
 import { useAuth } from '../../context/auth/useAuth';
 import Swal from 'sweetalert2';
@@ -40,6 +43,9 @@ const CampDashboard = () => {
   const [processingRegistrationId, setProcessingRegistrationId] = useState(null);
   const [donatedHistory, setDonatedHistory] = useState([]);
 
+  const [hospitals, setHospitals] = useState([]);
+  const [campCollections, setCampCollections] = useState([]);
+
   const [newCamp, setNewCamp] = useState({
     title: '',
     date: '',
@@ -47,6 +53,7 @@ const CampDashboard = () => {
     end_time: '',
     location: '',
     description: '',
+    destination_hospital: '',
   });
 
   const groupedRegistrations = useMemo(() => ({
@@ -87,12 +94,21 @@ const CampDashboard = () => {
     setDonatedHistory(data);
   };
 
+  const loadHospitals = async () => {
+    const { success, data } = await getAllHospitalsStock();
+    if (success && data.hospitals) {
+      setHospitals(data.hospitals);
+    }
+  };
+
   const loadAll = async () => {
     try {
       setLoading(true);
-      await Promise.all([loadProfile(), loadCamps(), loadNotifications(), loadDonatedHistory()]);
+      await Promise.all([loadProfile(), loadCamps(), loadNotifications(), loadDonatedHistory(), loadHospitals()]);
       if (selectedCamp?.id) {
         await loadRegistrations(selectedCamp.id);
+        const collData = await getCampCollections(selectedCamp.id);
+        setCampCollections(collData.collections || []);
       }
     } catch (error) {
       Swal.fire('Error', error.response?.data?.detail || 'Failed to load camp dashboard data.', 'error');
@@ -116,7 +132,7 @@ const CampDashboard = () => {
       await createBloodCamp(newCamp);
       Swal.fire('Success', 'Blood Camp created.', 'success');
       setActiveTab('dashboard');
-      setNewCamp({ title: '', date: '', start_time: '', end_time: '', location: '', description: '' });
+      setNewCamp({ title: '', date: '', start_time: '', end_time: '', location: '', description: '', destination_hospital: '' });
       await loadCamps();
     } catch (error) {
       Swal.fire('Error', error.response?.data?.detail || 'Failed to create camp.', 'error');
@@ -126,6 +142,23 @@ const CampDashboard = () => {
   const handleViewRegistrations = async (camp) => {
     setSelectedCamp(camp);
     await loadRegistrations(camp.id);
+    try {
+      const collData = await getCampCollections(camp.id);
+      setCampCollections(collData.collections || []);
+    } catch (err) {
+      console.error("Failed to load collections", err);
+    }
+  };
+
+  const handleDispatchBlood = async () => {
+    try {
+      const res = await dispatchCampBlood(selectedCamp.id);
+      Swal.fire('Dispatched', res.detail, 'success');
+      const collData = await getCampCollections(selectedCamp.id);
+      setCampCollections(collData.collections || []);
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.error || error.response?.data?.detail || 'Failed to dispatch', 'error');
+    }
   };
 
   const runRegistrationAction = async (registrationId, action) => {
@@ -209,6 +242,15 @@ const CampDashboard = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label>Location</label>
               <input type="text" required value={newCamp.location} onChange={e => setNewCamp({ ...newCamp, location: e.target.value })} placeholder="Full Address / Venue" />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <label>Destination Hospital</label>
+              <select required value={newCamp.destination_hospital} onChange={e => setNewCamp({ ...newCamp, destination_hospital: e.target.value })} style={{ padding: '8px', borderRadius: '4px', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text-main)' }}>
+                <option value="">Select destination hospital...</option>
+                {hospitals.map(h => (
+                  <option key={h.id} value={h.id}>{h.name} - {h.district}</option>
+                ))}
+              </select>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <label>Description</label>
@@ -348,6 +390,38 @@ const CampDashboard = () => {
                     )}
                   </div>
                 </td>
+              </tr>
+            )}
+          />
+
+          {/* Blood Dispatch Section */}
+          <h3 style={{ margin: '32px 0 16px 0', color: 'var(--color-text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Truck size={20} /> Blood Collections & Dispatch
+          </h3>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <p style={{ color: 'var(--color-text-muted)', fontSize: '0.9rem', margin: 0 }}>
+              Dispatch collected blood units to {selectedCamp.destination_hospital_name || 'the destination hospital'}.
+            </p>
+            <button 
+              className="dashboard btn btn-primary" 
+              onClick={handleDispatchBlood}
+              disabled={campCollections.filter(c => c.status === 'collected').length === 0}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
+            >
+              <Truck size={16} /> Dispatch Collected Blood
+            </button>
+          </div>
+          <DataTable 
+            columns={['Donor', 'Blood Group', 'Units', 'Status', 'Hospital']}
+            data={campCollections}
+            emptyMessage="No blood collected yet. Complete donor registrations first."
+            renderRow={(c) => (
+              <tr key={c.id}>
+                <td>{c.donorName}</td>
+                <td><span className="blood-type-circle" style={{ width: '32px', height: '32px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', backgroundColor: 'var(--color-critical-bg)', color: 'var(--color-critical)', fontWeight: 'bold', fontSize: '0.85rem' }}>{c.bloodType}</span></td>
+                <td>{c.units}</td>
+                <td><StatusBadge status={c.status} /></td>
+                <td>{c.destinationHospital ? c.destinationHospital.name : '-'}</td>
               </tr>
             )}
           />

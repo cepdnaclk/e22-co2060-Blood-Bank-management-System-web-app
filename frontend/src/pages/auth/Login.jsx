@@ -4,6 +4,8 @@ import { showSuccessToast, showErrorToast, showWarningToast } from '../../utils/
 import { useAuth } from '../../context/auth/useAuth';
 import './Login.css';
 
+import { getRoleConfig } from '../../config/roleConfig';
+
 const Login = () => {
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
@@ -28,12 +30,14 @@ const Login = () => {
 
         try {
             const userData = await loginUser(identifier, password);
+            const roleConfig = getRoleConfig(userData.role);
+            const destination = roleConfig?.dashboard || `/${userData.role || 'donor'}`;
 
             showSuccessToast(
                 'Login Successful!',
                 `Welcome back, ${userData.username || identifier.split('@')[0]}.`,
             ).then(() => {
-                navigate(`/${userData.role || 'donor'}`, { replace: true });
+                navigate(destination, { replace: true });
             });
         } catch (error) {
             const message = error.response?.data?.detail || 'Invalid credentials';

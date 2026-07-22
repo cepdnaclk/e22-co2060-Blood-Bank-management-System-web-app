@@ -12,6 +12,7 @@ const AdminLayout = () => {
     { path: '/admin?tab=donors', icon: <Users size={20} />, label: 'Manage Donors' },
     { path: '/admin?tab=camps', icon: <Calendar size={20} />, label: 'Camp Organizers' },
     { path: '/admin/doctors', icon: <Users size={20} />, label: 'Doctors' },
+    { path: '/admin/hospitals', icon: <Activity size={20} />, label: 'Hospitals' },
     { path: '/admin/inventory', icon: <Droplet size={20} />, label: 'National Inventory' },
     { path: '/admin/expiry-alerts', icon: <AlertTriangle size={20} />, label: 'Expiry Alerts' },
     { path: '/admin/camp-blood', icon: <Truck size={20} />, label: 'Camp Blood' },
